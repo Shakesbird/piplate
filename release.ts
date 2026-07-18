@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-19-self-repairing-updates',
-  version: '1.5.3',
+  id: '2026-07-19-bring-android-connection',
+  version: '1.5.4',
   en: {
     lines: [
-      'Stuck app updates now repair themselves automatically.',
+      'Bring preparation now works reliably on Android and can be retried.',
     ],
   },
   de: {
     lines: [
-      'Festhängende App-Updates reparieren sich jetzt automatisch.',
+      'Die Bring-Übergabe funktioniert auf Android jetzt zuverlässig und kann wiederholt werden.',
     ],
   },
 } as const;

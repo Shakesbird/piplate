@@ -1,5 +1,5 @@
 import { DatabaseReference, ref, remove, set } from 'firebase/database';
-import { firebaseAuth, firebaseDatabase, isBringConfigured } from '../firebase';
+import { firebaseAuth, firebaseDatabase, firebaseDatabaseUrl, isBringConfigured } from '../firebase';
 import { Recipe, WeeklyPlan } from '../types';
 
 export interface BringItem {
@@ -23,7 +23,6 @@ declare global {
   }
 }
 
-const DATABASE_URL = import.meta.env.VITE_FIREBASE_DATABASE_URL?.replace(/\/$/, '');
 const IMPORT_LIFETIME_MS = 10 * 60 * 1000;
 const LAST_IMPORT_KEY = 'piplate-bring-import-path';
 
@@ -120,7 +119,7 @@ export const preparePlannerIngredientsForBring = async (
     return testDeeplinkUrl;
   }
 
-  if (!isBringConfigured || !firebaseDatabase || !DATABASE_URL) {
+  if (!isBringConfigured || !firebaseDatabase || !firebaseDatabaseUrl) {
     throw new Error('bring/not-configured');
   }
 
@@ -144,6 +143,6 @@ export const preparePlannerIngredientsForBring = async (
   localStorage.setItem(LAST_IMPORT_KEY, importPath);
   scheduleRemoval(importReference, importPath);
 
-  const publicRecipeUrl = `${DATABASE_URL}/${importPath}/recipe.json`;
+  const publicRecipeUrl = `${firebaseDatabaseUrl}/${importPath}/recipe.json`;
   return buildBringDeeplinkUrl(publicRecipeUrl);
 };

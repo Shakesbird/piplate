@@ -24,7 +24,7 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
   const [activeDayForAdd, setActiveDayForAdd] = useState<string | null>(null);
   const [moveRecipe, setMoveRecipe] = useState<{ day: string; recipeId: string } | null>(null);
   const [dragTargetDay, setDragTargetDay] = useState<string | null>(null);
-  const [bringStatus, setBringStatus] = useState<'idle' | 'preparing' | 'opened' | 'sign-in-required' | 'error'>('idle');
+  const [bringStatus, setBringStatus] = useState<'idle' | 'preparing' | 'opened' | 'sign-in-required' | 'not-configured' | 'error'>('idle');
   const [bringLink, setBringLink] = useState<string | null>(null);
   const [bringLinkRevision, setBringLinkRevision] = useState(0);
 
@@ -60,7 +60,14 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
       .catch(error => {
         if (cancelled) return;
         console.error('Could not prepare Bring import', error);
-        setBringStatus(error instanceof Error && error.message === 'bring/sign-in-required' ? 'sign-in-required' : 'error');
+        const message = error instanceof Error ? error.message : '';
+        setBringStatus(
+          message === 'bring/sign-in-required'
+            ? 'sign-in-required'
+            : message === 'bring/not-configured'
+              ? 'not-configured'
+              : 'error',
+        );
       });
 
     return () => {
@@ -136,12 +143,13 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
             </a>
           ) : (
             <button
-              disabled
-              className="min-h-12 rounded-full bg-[#526647] px-4 text-white flex items-center justify-center gap-2 text-sm font-semibold shadow-md transition disabled:opacity-40"
+              onClick={() => setBringLinkRevision(revision => revision + 1)}
+              disabled={plannerIngredients.length === 0 || bringStatus === 'preparing' || bringStatus === 'sign-in-required' || bringStatus === 'not-configured'}
+              className="min-h-12 rounded-full bg-[#526647] px-4 text-white flex items-center justify-center gap-2 text-sm font-semibold shadow-md active:scale-95 transition disabled:opacity-40"
               aria-label={t('sendWeekToBring')}
             >
               <ShoppingCart size={18} />
-              <span>{bringStatus === 'preparing' ? t('preparingBring') : t('sendWeekToBring')}</span>
+              <span>{bringStatus === 'preparing' ? t('preparingBring') : bringStatus === 'error' ? t('retryBring') : t('sendWeekToBring')}</span>
             </button>
           )}
         </div>
@@ -155,6 +163,9 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
       )}
       {bringStatus === 'sign-in-required' && (
         <p className="mt-3 text-sm font-semibold text-[#9E4938]" role="alert">{t('bringSignInRequired')}</p>
+      )}
+      {bringStatus === 'not-configured' && (
+        <p className="mt-3 text-sm font-semibold text-[#9E4938]" role="alert">{t('bringNotConfigured')}</p>
       )}
 
       <div className="mt-7 md:mt-10 space-y-4 md:space-y-5">

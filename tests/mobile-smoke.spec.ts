@@ -221,6 +221,43 @@ test('planner starts with today and keeps planned meals after reload', async ({ 
   await expectNoHorizontalOverflow(page);
 });
 
+test('Bring preparation can be retried after a temporary Android or iPhone failure', async ({ page }) => {
+  await page.evaluate(() => {
+    const testWindow = window as Window & {
+      __PIPLATE_BRING_TEST__?: (recipe: unknown, deeplinkUrl: string) => void;
+    };
+    testWindow.__PIPLATE_BRING_TEST__ = () => {
+      throw new Error('temporary Bring preparation failure');
+    };
+  });
+
+  await openPlanner(page);
+  const todaySection = page.locator('[data-planner-day]').first();
+  await todaySection.getByRole('button', { name: /add recipe|rezept zu/i }).click();
+  await todaySection.getByRole('button', { name: /gnocci/i }).click();
+
+  await expect(page.getByRole('alert')).toBeVisible();
+  const retryButton = page.getByRole('button', { name: /open in Bring|in Bring/i });
+  await expect(retryButton).toBeEnabled();
+  await expect(retryButton).toContainText(/Try Bring again|Bring erneut/i);
+
+  await page.evaluate(() => {
+    const testWindow = window as Window & {
+      __PIPLATE_BRING_TEST__?: (recipe: unknown, deeplinkUrl: string) => void;
+      __PIPLATE_LAST_BRING_IMPORT__?: { recipe: unknown; deeplinkUrl: string };
+    };
+    testWindow.__PIPLATE_BRING_TEST__ = (recipe, deeplinkUrl) => {
+      testWindow.__PIPLATE_LAST_BRING_IMPORT__ = { recipe, deeplinkUrl };
+    };
+  });
+
+  await retryButton.click();
+  await expect(page.getByRole('link', { name: /open in Bring|in Bring/i })).toHaveAttribute(
+    'href',
+    /api\.getbring\.com\/rest\/bringrecipes\/deeplink\?/,
+  );
+});
+
 test('account and household sync setup works on mobile', async ({ page }) => {
   await openSettings(page);
   const syncSettings = page.getByTestId('sync-settings');

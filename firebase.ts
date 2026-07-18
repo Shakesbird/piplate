@@ -12,13 +12,20 @@ const requiredFirebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+const configuredDatabaseUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL?.replace(/\/$/, '');
+const derivedDatabaseUrl = requiredFirebaseConfig.projectId
+  ? `https://${requiredFirebaseConfig.projectId}-default-rtdb.europe-west1.firebasedatabase.app`
+  : undefined;
+
+export const firebaseDatabaseUrl = configuredDatabaseUrl || derivedDatabaseUrl;
+
 const firebaseConfig = {
   ...requiredFirebaseConfig,
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  databaseURL: firebaseDatabaseUrl,
 };
 
 export const isFirebaseConfigured = Object.values(requiredFirebaseConfig).every(Boolean);
-export const isBringConfigured = isFirebaseConfigured && Boolean(firebaseConfig.databaseURL);
+export const isBringConfigured = isFirebaseConfigured && Boolean(firebaseDatabaseUrl);
 
 const app = isFirebaseConfigured
   ? (getApps()[0] || initializeApp(firebaseConfig))
