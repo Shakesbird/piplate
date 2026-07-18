@@ -18,7 +18,7 @@ const MOCK_RECIPES: Recipe[] = [
     ],
     portions: 4,
     nutrition: { calories: 580, protein: 35, carbs: 65, fat: 20 },
-    imageUri: './recipe-images/gnocchi-chicken-pepper.png',
+    imageUri: './recipe-images/gnocchi-chicken-pepper.webp',
     createdAt: Date.now(),
   },
   {
@@ -32,7 +32,7 @@ const MOCK_RECIPES: Recipe[] = [
     ],
     portions: 4,
     nutrition: { calories: 450, protein: 18, carbs: 45, fat: 25 },
-    imageUri: './recipe-images/hotdog.png',
+    imageUri: './recipe-images/hotdog.webp',
     createdAt: Date.now(),
   },
   {
@@ -47,7 +47,7 @@ const MOCK_RECIPES: Recipe[] = [
     ],
     portions: 3,
     nutrition: { calories: 380, protein: 10, carbs: 75, fat: 8 },
-    imageUri: './recipe-images/yoghurt-rice-skillet.png',
+    imageUri: './recipe-images/yoghurt-rice-skillet.webp',
     createdAt: Date.now(),
   },
   {
@@ -62,7 +62,7 @@ const MOCK_RECIPES: Recipe[] = [
     ],
     portions: 2,
     nutrition: { calories: 520, protein: 40, carbs: 35, fat: 28 },
-    imageUri: './recipe-images/chickpea-ajvar.png',
+    imageUri: './recipe-images/chickpea-ajvar.webp',
     createdAt: Date.now(),
   },
   {
@@ -77,7 +77,7 @@ const MOCK_RECIPES: Recipe[] = [
     ],
     portions: 4,
     nutrition: { calories: 480, protein: 15, carbs: 55, fat: 22 },
-    imageUri: './recipe-images/mango-curry.png',
+    imageUri: './recipe-images/mango-curry.webp',
     createdAt: Date.now(),
   },
   {
@@ -92,7 +92,7 @@ const MOCK_RECIPES: Recipe[] = [
     ],
     portions: 2,
     nutrition: { calories: 320, protein: 8, carbs: 60, fat: 6 },
-    imageUri: './recipe-images/muesli.png',
+    imageUri: './recipe-images/muesli.webp',
     createdAt: Date.now(),
   },
   {
@@ -107,7 +107,7 @@ const MOCK_RECIPES: Recipe[] = [
     ],
     portions: 6,
     nutrition: { calories: 650, protein: 25, carbs: 80, fat: 28 },
-    imageUri: './recipe-images/pasta-bake.png',
+    imageUri: './recipe-images/pasta-bake.webp',
     createdAt: Date.now(),
   },
   {
@@ -122,7 +122,7 @@ const MOCK_RECIPES: Recipe[] = [
     ],
     portions: 4,
     nutrition: { calories: 350, protein: 9, carbs: 50, fat: 12 },
-    imageUri: './recipe-images/pancakes.png',
+    imageUri: './recipe-images/pancakes.webp',
     createdAt: Date.now(),
   },
   {
@@ -137,7 +137,7 @@ const MOCK_RECIPES: Recipe[] = [
     ],
     portions: 2,
     nutrition: { calories: 580, protein: 28, carbs: 65, fat: 25 },
-    imageUri: './recipe-images/udon-noodles.png',
+    imageUri: './recipe-images/udon-noodles.webp',
     createdAt: Date.now(),
   },
   {
@@ -152,7 +152,7 @@ const MOCK_RECIPES: Recipe[] = [
     ],
     portions: 2,
     nutrition: { calories: 420, protein: 32, carbs: 35, fat: 18 },
-    imageUri: './recipe-images/wrap.png',
+    imageUri: './recipe-images/wrap.webp',
     createdAt: Date.now(),
   }
 ];

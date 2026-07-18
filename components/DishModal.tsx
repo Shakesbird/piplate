@@ -9,7 +9,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { DEFAULT_RECIPE_IMAGE, NutritionalValue, Recipe } from '../types';
+import { DEFAULT_RECIPE_IMAGE, getRecipeImageSource, NutritionalValue, Recipe } from '../types';
 import { useLanguage } from '../i18n';
 
 interface DishModalProps {
@@ -208,7 +208,7 @@ const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           <section className="grid min-w-0 lg:grid-cols-[1.08fr_.92fr] border-b border-[#E8E1D6]">
             <div className="relative min-w-0 max-w-full min-h-[260px] sm:min-h-[330px] lg:min-h-[430px] bg-[#E3DCCF] overflow-hidden group">
-              <img src={formData.imageUri || DEFAULT_RECIPE_IMAGE} onError={event => { event.currentTarget.src = DEFAULT_RECIPE_IMAGE; }} alt={formData.title || 'Recipe'} className="absolute inset-0 block h-full w-full max-w-full object-cover" style={{ width: '100%', maxWidth: '100%' }} />
+              <img src={getRecipeImageSource(formData.imageUri)} onError={event => { event.currentTarget.src = DEFAULT_RECIPE_IMAGE; }} alt={formData.title || 'Recipe'} className="absolute inset-0 block h-full w-full max-w-full object-cover" style={{ width: '100%', maxWidth: '100%' }} decoding="async" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
               {isEditing && (
                 <>

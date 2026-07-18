@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-18-safari-install',
-  version: '1.5.0',
+  id: '2026-07-18-faster-recipe-images',
+  version: '1.5.1',
   en: {
     lines: [
-      'PiPlate can now be installed from Safari with clear iPhone instructions.',
+      'Recipe pictures now load much faster on iPhone.',
     ],
   },
   de: {
     lines: [
-      'PiPlate lässt sich jetzt mit einer klaren iPhone-Anleitung aus Safari installieren.',
+      'Rezeptbilder laden auf dem iPhone jetzt deutlich schneller.',
     ],
   },
 } as const;

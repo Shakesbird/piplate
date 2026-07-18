@@ -160,12 +160,13 @@ const App: React.FC = () => {
         )}
 
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6" aria-busy={recipesLoading}>
-          {filteredRecipes.map(recipe => (
+          {filteredRecipes.map((recipe, index) => (
             <DishCard
               key={recipe.id}
               recipe={recipe}
               onClick={() => handleOpenRecipe(recipe.id)}
               onAddToDay={handleAddRecipeToDay}
+              prioritizeImage={index < 4}
             />
           ))}
         </div>

@@ -81,6 +81,26 @@ test('changelog stays minimal and readable', async ({ page }) => {
 test('generated patch worker keeps activation alive until it finishes', async () => {
   const serviceWorker = await readFile('dist/sw.js', 'utf8');
   expect(serviceWorker).toContain('event.waitUntil(self.skipWaiting());');
+  expect(serviceWorker).not.toContain('recipe-images/');
+});
+
+test('recipe previews use small, prioritised WebP images', async ({ page }) => {
+  await expect.poll(() => page.evaluate(() => [...document.querySelectorAll<HTMLImageElement>('article img')]
+    .slice(0, 4)
+    .every(image => image.complete && image.naturalWidth > 0))).toBe(true);
+
+  const previews = await page.evaluate(() => [...document.querySelectorAll<HTMLImageElement>('article img')].map(image => ({
+    src: image.src,
+    loading: image.loading,
+    decoding: image.decoding,
+    fetchPriority: image.fetchPriority,
+    loaded: image.complete && image.naturalWidth > 0,
+  })));
+
+  expect(previews).toHaveLength(10);
+  expect(previews.every(image => image.src.endsWith('.webp'))).toBe(true);
+  expect(previews.slice(0, 4).every(image => image.loading === 'eager' && image.fetchPriority === 'high' && image.loaded)).toBe(true);
+  expect(previews.slice(4).every(image => image.loading === 'lazy' && image.fetchPriority === 'low' && image.decoding === 'async')).toBe(true);
 });
 
 test('update repair keeps local recipes and returns to PiPlate', async ({ page }) => {
@@ -239,7 +259,7 @@ test('upgrading a version 1 database preserves existing recipes', async ({ page 
           instructions: ['Keep it during upgrades'],
           portions: 2,
           nutrition: { calories: 1, protein: 1, carbs: 1, fat: 1 },
-          imageUri: '',
+          imageUri: './recipe-images/gnocchi-chicken-pepper.png',
           createdAt: 1,
         });
         transaction.objectStore('settings').put({ key: 'initialSeedComplete', value: true });
@@ -252,6 +272,7 @@ test('upgrading a version 1 database preserves existing recipes', async ({ page 
   await page.goto('/');
   await expect(page.getByRole('heading', { name: legacyTitle })).toBeVisible();
   await expect(page.getByText(/1 (recipe|rezept)/i)).toBeVisible();
+  await expect(page.locator('article img')).toHaveAttribute('src', /recipe-images\/gnocchi-chicken-pepper\.webp/);
 
   // Version 3 keeps a separate safety snapshot. If the primary recipe store is
   // unexpectedly empty after an update, startup restores the snapshot.

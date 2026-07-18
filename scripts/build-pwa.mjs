@@ -16,7 +16,11 @@ const collectFiles = async directory => {
 };
 
 const files = (await collectFiles(distDir))
-  .filter(path => !['sw.js', 'version.json'].includes(relative(distDir, path)))
+  .filter(path => {
+    const pathFromDist = relative(distDir, path);
+    return !['sw.js', 'version.json'].includes(pathFromDist)
+      && !pathFromDist.split(sep).includes('recipe-images');
+  })
   .sort();
 const hash = createHash('sha256');
 for (const file of files) {

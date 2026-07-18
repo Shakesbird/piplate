@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowRightLeft, CalendarDays, Check, GripVertical, Plus, ShoppingCart, X } from 'lucide-react';
-import { Recipe, WeeklyPlan } from '../types';
+import { DEFAULT_RECIPE_IMAGE, getRecipeImageSource, Recipe, WeeklyPlan } from '../types';
 import { useLanguage } from '../i18n';
 import { collectPlannerIngredients, openPlannerIngredientsInBring } from '../services/bringService';
 
@@ -160,7 +160,7 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
                         onDragEnd={() => setDragTargetDay(null)}
                         className="relative min-w-0 w-[150px] max-w-full sm:w-[180px] md:w-[210px] shrink-0 aspect-[4/3] rounded-[1.2rem] overflow-hidden bg-[#DDD5C8] snap-start shadow-sm group"
                       >
-                        <img src={recipe.imageUri} alt="" className="block h-full w-full max-w-full object-cover" style={{ width: '100%', maxWidth: '100%' }} />
+                        <img src={getRecipeImageSource(recipe.imageUri)} onError={event => { event.currentTarget.src = DEFAULT_RECIPE_IMAGE; }} alt="" className="block h-full w-full max-w-full object-cover" style={{ width: '100%', maxWidth: '100%' }} loading="lazy" decoding="async" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10" />
                         <div className="absolute top-2 left-2 hidden md:flex h-8 w-8 rounded-full bg-white/85 items-center justify-center cursor-grab"><GripVertical size={15} /></div>
                         <div className="absolute top-2 right-2 flex gap-1">
@@ -186,7 +186,7 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
                   <div className="flex-1 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     {recipes.map(recipe => (
                       <button key={recipe.id} onClick={() => addRecipeToDay(day, recipe.id)} className="min-h-[58px] flex items-center gap-3 rounded-2xl p-2 text-left bg-[#F5F0E7] active:bg-[#E8DED1]">
-                        <img src={recipe.imageUri} alt="" className="h-11 w-11 rounded-xl object-cover" />
+                        <img src={getRecipeImageSource(recipe.imageUri)} onError={event => { event.currentTarget.src = DEFAULT_RECIPE_IMAGE; }} alt="" className="h-11 w-11 rounded-xl object-cover" loading="lazy" decoding="async" />
                         <span className="font-semibold text-sm line-clamp-2">{recipe.title}</span>
                       </button>
                     ))}

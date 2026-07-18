@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { CalendarPlus, Check, Flame, Users, X } from 'lucide-react';
-import { DEFAULT_RECIPE_IMAGE, getTodayFirstDayOrder, Recipe } from '../types';
+import { DEFAULT_RECIPE_IMAGE, getRecipeImageSource, getTodayFirstDayOrder, Recipe } from '../types';
 import { useLanguage } from '../i18n';
 
 interface DishCardProps {
   recipe: Recipe;
   onClick: () => void;
   onAddToDay: (day: string, recipeId: string) => Promise<void>;
+  prioritizeImage?: boolean;
 }
 
-const DishCard: React.FC<DishCardProps> = ({ recipe, onClick, onAddToDay }) => {
+const DishCard: React.FC<DishCardProps> = ({ recipe, onClick, onAddToDay, prioritizeImage = false }) => {
   const { t, dayName } = useLanguage();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [savedDay, setSavedDay] = useState<string | null>(null);
@@ -45,12 +46,14 @@ const DishCard: React.FC<DishCardProps> = ({ recipe, onClick, onAddToDay }) => {
       aria-label={t('openRecipe', { title: recipe.title })}
     >
       <img
-        src={recipe.imageUri || DEFAULT_RECIPE_IMAGE}
+        src={getRecipeImageSource(recipe.imageUri)}
         onError={event => { event.currentTarget.src = DEFAULT_RECIPE_IMAGE; }}
         alt=""
         className="block h-full w-full max-w-full object-cover transition duration-700 md:group-hover:scale-[1.04]"
         style={{ width: '100%', maxWidth: '100%' }}
-        loading="lazy"
+        decoding="async"
+        loading={prioritizeImage ? 'eager' : 'lazy'}
+        fetchPriority={prioritizeImage ? 'high' : 'low'}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/5" />
 
