@@ -2,11 +2,11 @@ import { expect, Page, test } from '@playwright/test';
 
 const openApp = async (page: Page) => {
   await page.goto('/');
-  const releaseDialog = page.getByRole('dialog');
-  if (await releaseDialog.count() === 1 && await releaseDialog.isVisible()) {
-    await releaseDialog.getByRole('button', { name: /got it|verstanden/i }).click();
-  }
   await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
+  const releaseDialog = page.getByRole('dialog');
+  await expect(releaseDialog).toBeVisible();
+  await releaseDialog.getByRole('button', { name: /got it|verstanden/i }).click();
+  await expect(releaseDialog).toBeHidden();
 };
 
 const expectNoHorizontalOverflow = async (page: Page) => {
@@ -46,6 +46,9 @@ const openSettings = async (page: Page) => {
 };
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as Window & { __PIPLATE_SYNC_TEST__?: boolean }).__PIPLATE_SYNC_TEST__ = true;
+  });
   await openApp(page);
 });
 
@@ -56,8 +59,8 @@ test('changelog stays minimal and readable', async ({ page }) => {
   const changelog = page.getByRole('dialog', { name: 'Changelog' });
   await expect(changelog).toBeVisible();
   await expect(changelog.getByRole('heading', { name: 'Changelog' })).toBeVisible();
-  await expect(changelog.locator('[data-changelog-line]')).toHaveCount(2);
-  await expect(changelog.getByText(/appears once|erscheint einmal|v1\.2\.4/i)).toHaveCount(0);
+  await expect(changelog.locator('[data-changelog-line]')).toHaveCount(1);
+  await expect(changelog.getByText(/appears once|erscheint einmal|v1\.3\.0/i)).toHaveCount(0);
   await expect(changelog.getByRole('button', { name: /got it|verstanden/i })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
@@ -112,5 +115,25 @@ test('planner starts with today and keeps planned meals after reload', async ({ 
   const reloadedTodaySection = page.locator('[data-planner-day]').first();
   await expect(reloadedTodaySection).toHaveAttribute('data-planner-day', today);
   await expect(reloadedTodaySection.getByRole('heading', { name: /gnocci/i })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+});
+
+test('account and household sync setup works on mobile', async ({ page }) => {
+  await openSettings(page);
+  const syncSettings = page.getByTestId('sync-settings');
+  await expect(syncSettings.getByRole('heading', { name: /shared household|gemeinsamer haushalt/i })).toBeVisible();
+
+  await syncSettings.getByRole('button', { name: /create an account|konto erstellen/i }).click();
+  await syncSettings.getByLabel(/email|e-mail/i).fill('mobile-test@example.com');
+  await syncSettings.getByLabel(/password|passwort/i).fill('safe-test-password');
+  await syncSettings.getByRole('button', { name: /^create account$|^konto erstellen$/i }).click();
+
+  await expect(syncSettings.getByText(/signed in as|angemeldet als/i)).toBeVisible();
+  await syncSettings.getByRole('button', { name: /create a household|haushalt erstellen/i }).click();
+  await expect(syncSettings.getByRole('group', { name: /connect local data|lokale daten verbinden/i })).toBeVisible();
+  await syncSettings.getByRole('button', { name: /confirm and connect|bestätigen und verbinden/i }).click();
+
+  await expect(syncSettings.getByText('TESTHOUSEHOLD2')).toBeVisible();
+  await expect(syncSettings.getByText(/everything is up to date|alles ist aktuell/i)).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });

@@ -1,0 +1,76 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isMember(householdId) {
+      return signedIn()
+        && request.auth.uid in get(/databases/$(database)/documents/households/$(householdId)).data.memberIds;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['householdId', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /households/{householdId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['ownerId', 'memberIds', 'joinEnabled', 'createdAt', 'updatedAt'])
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.memberIds == [request.auth.uid]
+        && request.resource.data.joinEnabled == true;
+
+      // A random 14-character document ID acts as the invitation. The rule
+      // permits a direct lookup for joining, but collection queries still fail.
+      allow read: if signedIn()
+        && (request.auth.uid in resource.data.memberIds || resource.data.joinEnabled == true);
+
+      allow update: if signedIn() && (
+        (
+          resource.data.ownerId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['joinEnabled', 'updatedAt'])
+        )
+        ||
+        (
+          resource.data.joinEnabled == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'updatedAt'])
+          && request.resource.data.memberIds.size() == resource.data.memberIds.size() + 1
+          && request.resource.data.memberIds.size() <= 2
+          && request.resource.data.memberIds.hasAll(resource.data.memberIds)
+          && request.auth.uid in request.resource.data.memberIds
+        )
+      );
+      allow delete: if false;
+    }
+
+    match /households/{householdId}/recipes/{recipeId} {
+      allow read: if isMember(householdId);
+      allow create, update: if isMember(householdId)
+        && request.resource.data.id == recipeId
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt is number
+        && request.resource.data.keys().hasOnly([
+          'id', 'title', 'ingredients', 'instructions', 'portions', 'nutrition',
+          'imageUri', 'imagePath', 'imageContentType', 'createdAt', 'updatedAt',
+          'updatedBy', 'deleted', 'serverUpdatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /households/{householdId}/planner/{plannerId} {
+      allow read: if isMember(householdId);
+      allow create, update: if isMember(householdId)
+        && plannerId == 'current'
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt is number
+        && request.resource.data.keys().hasOnly(['days', 'updatedAt', 'updatedBy', 'serverUpdatedAt']);
+      allow delete: if false;
+    }
+  }
+}

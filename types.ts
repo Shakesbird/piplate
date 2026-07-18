@@ -14,10 +14,23 @@ export interface Recipe {
   nutrition: NutritionalValue;
   imageUri: string;
   createdAt: number;
+  updatedAt?: number;
+  syncedImagePath?: string;
 }
 
 export interface WeeklyPlan {
   [day: string]: string[];
+}
+
+export type SyncOperationType = 'recipe-upsert' | 'recipe-delete' | 'planner-upsert';
+
+export interface SyncOperation {
+  id?: number;
+  type: SyncOperationType;
+  entityId: string;
+  householdId?: string;
+  payload?: Recipe | WeeklyPlan;
+  createdAt: number;
 }
 
 export type ViewState = 'GALLERY' | 'PLANNER' | 'SETTINGS';

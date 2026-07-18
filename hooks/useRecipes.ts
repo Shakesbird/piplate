@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { queuePlannerUpsert, queueRecipeDelete, queueRecipeUpsert } from '../services/localSyncQueue';
 import { getTodayFirstDayOrder, Recipe, WeeklyPlan } from '../types';
 
 const MOCK_RECIPES: Recipe[] = [
@@ -202,7 +203,9 @@ export const useRecipes = () => {
 
   const saveRecipe = async (recipe: Recipe) => {
     try {
-      await db.recipes.put(recipe);
+      const nextRecipe = { ...recipe, updatedAt: Date.now() };
+      await db.recipes.put(nextRecipe);
+      await queueRecipeUpsert(nextRecipe);
     } catch (e) {
       console.error('Failed to save recipe:', e);
       alert('Could not save recipe.');
@@ -211,7 +214,10 @@ export const useRecipes = () => {
 
   const setWeeklyPlan = async (plan: WeeklyPlan) => {
     try {
+      const updatedAt = Date.now();
       await db.settings.put({ key: 'weeklyPlan', value: plan });
+      await db.settings.put({ key: 'weeklyPlanUpdatedAt', value: updatedAt });
+      await queuePlannerUpsert(plan, updatedAt);
     } catch (e) {
       console.error('Failed to save weekly plan:', e);
     }
@@ -219,10 +225,14 @@ export const useRecipes = () => {
 
   const deleteRecipe = async (id: string) => {
     try {
+      const deletedAt = Date.now();
       await db.recipes.delete(id);
+      await queueRecipeDelete(id, deletedAt);
       const currentPlan = await db.settings.get('weeklyPlan');
       if (currentPlan && currentPlan.value) {
-        const plan: WeeklyPlan = currentPlan.value;
+        const plan: WeeklyPlan = Object.fromEntries(
+          Object.entries(currentPlan.value as WeeklyPlan).map(([day, recipeIds]) => [day, [...recipeIds]]),
+        );
         let updated = false;
         Object.keys(plan).forEach(day => {
           if (plan[day].includes(id)) {

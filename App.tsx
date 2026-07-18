@@ -22,6 +22,8 @@ import { useLanguage } from './i18n';
 import { usePwa } from './hooks/usePwa';
 import ReleaseNotesModal from './components/ReleaseNotesModal';
 import { CURRENT_RELEASE } from './release';
+import { useHouseholdSync } from './hooks/useHouseholdSync';
+import SyncSettings from './components/SyncSettings';
 
 type ElectronIpcRenderer = {
   invoke: (channel: string) => Promise<boolean | void>;
@@ -50,6 +52,7 @@ const App: React.FC = () => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showReleaseNotes, setShowReleaseNotes] = useState(() => localStorage.getItem('piplate-seen-release') !== CURRENT_RELEASE.id);
   const { applyUpdate, canInstall, install, isInstalled, isUpdating, updateAvailable } = usePwa();
+  const householdSync = useHouseholdSync();
 
   const dismissReleaseNotes = () => {
     localStorage.setItem('piplate-seen-release', CURRENT_RELEASE.id);
@@ -201,6 +204,8 @@ const App: React.FC = () => {
           </div>
         </div>
       </section>
+
+      <SyncSettings sync={householdSync} />
 
       <section className="mt-4 rounded-[2rem] border border-[#DED8CD] bg-white/80 p-5 sm:p-6 shadow-[0_18px_60px_rgba(47,43,37,0.06)]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

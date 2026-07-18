@@ -28,14 +28,26 @@ const compressImage = (file: File): Promise<string> => new Promise((resolve, rej
     image.src = event.target?.result as string;
     image.onload = () => {
       const canvas = document.createElement('canvas');
-      const maxSize = 1200;
+      const maxSize = 900;
       const ratio = Math.min(1, maxSize / Math.max(image.width, image.height));
       canvas.width = Math.round(image.width * ratio);
       canvas.height = Math.round(image.height * ratio);
       const context = canvas.getContext('2d');
       if (!context) return reject(new Error('Canvas context is unavailable'));
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', 0.72));
+      let quality = 0.72;
+      let compressed = canvas.toDataURL('image/jpeg', quality);
+      while (compressed.length > 600_000) {
+        if (quality > 0.4) quality -= 0.08;
+        else {
+          canvas.width = Math.max(320, Math.round(canvas.width * 0.8));
+          canvas.height = Math.max(240, Math.round(canvas.height * 0.8));
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        }
+        compressed = canvas.toDataURL('image/jpeg', quality);
+        if (canvas.width <= 320 && canvas.height <= 240) break;
+      }
+      resolve(compressed);
     };
     image.onerror = reject;
   };
