@@ -38,6 +38,7 @@ const App: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
   const {
     recipes,
+    recipesLoading,
     weeklyPlan,
     dayOrder,
     saveRecipe,
@@ -149,7 +150,13 @@ const App: React.FC = () => {
           <span className="text-sm text-[#8E887E]">{t('recipeCount', { count: filteredRecipes.length })}</span>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+        {recipesLoading && (
+          <div className="mb-5 rounded-2xl bg-white/70 px-5 py-4 text-sm text-[#756E64]" role="status">
+            {t('loadingRecipes')}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6" aria-busy={recipesLoading}>
           {filteredRecipes.map(recipe => (
             <DishCard
               key={recipe.id}
@@ -168,7 +175,7 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {recipes.length === 0 && !searchQuery && (
+        {!recipesLoading && recipes.length === 0 && !searchQuery && (
           <button onClick={handleAddNew} className="w-full rounded-[2rem] border border-dashed border-[#CFC6B9] bg-white/60 py-16 text-[#756E64] active:scale-[0.99] transition">
             <Plus size={34} className="mx-auto" />
             <span className="mt-3 block font-semibold">{t('addFirstRecipe')}</span>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { createLocalBackup, restoreLatestBackupIfRecipesAreEmpty } from '../services/localBackups';
 import { queuePlannerUpsert, queueRecipeDelete, queueRecipeUpsert } from '../services/localSyncQueue';
 import { getTodayFirstDayOrder, Recipe, WeeklyPlan } from '../types';
 
@@ -157,7 +158,9 @@ const MOCK_RECIPES: Recipe[] = [
 ];
 
 export const useRecipes = () => {
-  const recipes = useLiveQuery(() => db.recipes.toArray()) || [];
+  const recipeData = useLiveQuery(() => db.recipes.toArray());
+  const recipes = recipeData || [];
+  const recipesLoading = recipeData === undefined;
   const weeklyPlanData = useLiveQuery(() => db.settings.get('weeklyPlan'));
   const weeklyPlan: WeeklyPlan = weeklyPlanData?.value || {};
   const [dayOrder, setDayOrder] = useState(getTodayFirstDayOrder);
@@ -186,6 +189,7 @@ export const useRecipes = () => {
 
   useEffect(() => {
     const initDb = async () => {
+      await restoreLatestBackupIfRecipesAreEmpty();
       await db.transaction('rw', db.recipes, db.settings, async () => {
         // Updates never seed, bulk-update, or otherwise rewrite an existing
         // recipe collection. This marker also prevents deleted starter recipes
@@ -225,6 +229,7 @@ export const useRecipes = () => {
 
   const deleteRecipe = async (id: string) => {
     try {
+      await createLocalBackup('before-recipe-delete');
       const deletedAt = Date.now();
       await db.recipes.delete(id);
       await queueRecipeDelete(id, deletedAt);
@@ -283,5 +288,5 @@ export const useRecipes = () => {
     }
   };
 
-  return { recipes, weeklyPlan, dayOrder, saveRecipe, deleteRecipe, updateWeeklyPlan, moveRecipeBetweenDays };
+  return { recipes, recipesLoading, weeklyPlan, dayOrder, saveRecipe, deleteRecipe, updateWeeklyPlan, moveRecipeBetweenDays };
 };

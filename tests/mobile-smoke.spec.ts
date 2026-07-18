@@ -54,7 +54,7 @@ test.beforeEach(async ({ page }) => {
 
 test('changelog stays minimal and readable', async ({ page }) => {
   await page.evaluate(() => localStorage.removeItem('piplate-seen-release'));
-  await page.reload();
+  await page.goto('/');
 
   const changelog = page.getByRole('dialog', { name: 'Changelog' });
   await expect(changelog).toBeVisible();
@@ -136,4 +136,68 @@ test('account and household sync setup works on mobile', async ({ page }) => {
   await expect(syncSettings.getByText('TESTHOUSEHOLD2')).toBeVisible();
   await expect(syncSettings.getByText(/everything is up to date|alles ist aktuell/i)).toBeVisible();
   await expectNoHorizontalOverflow(page);
+});
+
+test('upgrading a version 1 database preserves existing recipes', async ({ page }) => {
+  const legacyTitle = 'My irreplaceable legacy recipe';
+  await page.route('**/legacy-seed', route => route.fulfill({
+    contentType: 'text/html',
+    body: '<!doctype html><title>Legacy PiPlate seed</title>',
+  }));
+  await page.goto('/legacy-seed');
+  await page.evaluate(async title => {
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase('PiPlateDB');
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+      request.onblocked = () => reject(new Error('Legacy database reset was blocked'));
+    });
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('PiPlateDB', 1);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore('recipes', { keyPath: 'id' }).createIndex('title', 'title');
+        request.result.createObjectStore('settings', { keyPath: 'key' });
+      };
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction(['recipes', 'settings'], 'readwrite');
+        transaction.objectStore('recipes').put({
+          id: 'legacy-custom',
+          title,
+          ingredients: ['Do not lose this'],
+          instructions: ['Keep it during upgrades'],
+          portions: 2,
+          nutrition: { calories: 1, protein: 1, carbs: 1, fat: 1 },
+          imageUri: '',
+          createdAt: 1,
+        });
+        transaction.objectStore('settings').put({ key: 'initialSeedComplete', value: true });
+        transaction.oncomplete = () => { database.close(); resolve(); };
+        transaction.onerror = () => reject(transaction.error);
+      };
+    });
+  }, legacyTitle);
+
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: legacyTitle })).toBeVisible();
+  await expect(page.getByText(/1 (recipe|rezept)/i)).toBeVisible();
+
+  // Version 3 keeps a separate safety snapshot. If the primary recipe store is
+  // unexpectedly empty after an update, startup restores the snapshot.
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('PiPlateDB');
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction('recipes', 'readwrite');
+        transaction.objectStore('recipes').clear();
+        transaction.oncomplete = () => { database.close(); resolve(); };
+        transaction.onerror = () => reject(transaction.error);
+      };
+    });
+  });
+  await page.reload();
+  await expect(page.getByRole('heading', { name: legacyTitle })).toBeVisible();
 });

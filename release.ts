@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-18-household-sync',
-  version: '1.3.0',
+  id: '2026-07-18-recipe-recovery',
+  version: '1.3.1',
   en: {
     lines: [
-      'Recipes and the weekly planner can now be shared across devices.',
+      'Recipe storage is now checked and repaired automatically after updates.',
     ],
   },
   de: {
     lines: [
-      'Rezepte und Wochenplan können jetzt geräteübergreifend geteilt werden.',
+      'Der Rezeptspeicher wird nach Updates automatisch geprüft und repariert.',
     ],
   },
 } as const;

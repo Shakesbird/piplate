@@ -26,6 +26,7 @@ import {
   prepareFirebaseAuth,
 } from '../firebase';
 import { queuePlannerUpsert, queueRecipeUpsert } from '../services/localSyncQueue';
+import { createLocalBackup } from '../services/localBackups';
 import { Recipe, WeeklyPlan } from '../types';
 import { useMockHouseholdSync } from './useMockHouseholdSync';
 
@@ -195,6 +196,7 @@ const useFirebaseHouseholdSync = (): HouseholdSyncController => {
   const mergeHousehold = useCallback(async (nextHouseholdId: string, includeStarterRecipes: boolean) => {
     if (!user || !firestore) throw new Error('sync/not-signed-in');
     setActivity('syncing');
+    await createLocalBackup('before-household-merge');
     await db.settings.put({ key: 'activeSyncHouseholdId', value: nextHouseholdId });
     const [localRecipes, localPlanRecord, remoteRecipeSnapshot, remotePlanSnapshot] = await Promise.all([
       db.recipes.toArray(),
