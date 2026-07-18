@@ -14,6 +14,7 @@ export const usePwa = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const reloadForNewWorker = useRef(false);
+  const fallbackReloadTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const handleInstallPrompt = (event: Event) => {
@@ -51,6 +52,10 @@ export const usePwa = () => {
     const handleControllerChange = () => {
       if (!reloadForNewWorker.current) return;
       reloadForNewWorker.current = false;
+      if (fallbackReloadTimer.current !== undefined) {
+        window.clearTimeout(fallbackReloadTimer.current);
+        fallbackReloadTimer.current = undefined;
+      }
       window.location.reload();
     };
 
@@ -76,6 +81,7 @@ export const usePwa = () => {
     return () => {
       disposed = true;
       if (updateTimer !== undefined) window.clearInterval(updateTimer);
+      if (fallbackReloadTimer.current !== undefined) window.clearTimeout(fallbackReloadTimer.current);
       navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
     };
   }, []);
@@ -88,14 +94,49 @@ export const usePwa = () => {
     return choice.outcome === 'accepted';
   }, [installPrompt]);
 
-  const applyUpdate = useCallback(() => {
-    if (!registration?.waiting) {
-      void registration?.update();
-      return;
-    }
+  const applyUpdate = useCallback(async () => {
     setIsUpdating(true);
     reloadForNewWorker.current = true;
-    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+    const activeRegistration = registration
+      ?? await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL);
+
+    if (!activeRegistration) {
+      reloadForNewWorker.current = false;
+      setUpdateAvailable(false);
+      setIsUpdating(false);
+      return;
+    }
+
+    if (!activeRegistration.waiting) {
+      try {
+        await activeRegistration.update();
+      } catch (error) {
+        console.error('PiPlate could not recheck the pending patch:', error);
+      }
+    }
+
+    const waitingWorker = activeRegistration.waiting;
+    if (!waitingWorker) {
+      reloadForNewWorker.current = false;
+      setUpdateAvailable(false);
+      setIsUpdating(false);
+      return;
+    }
+
+    const reloadWhenActivated = () => {
+      if (waitingWorker.state !== 'activated' || !reloadForNewWorker.current) return;
+      reloadForNewWorker.current = false;
+      if (fallbackReloadTimer.current !== undefined) window.clearTimeout(fallbackReloadTimer.current);
+      window.location.reload();
+    };
+
+    waitingWorker.addEventListener('statechange', reloadWhenActivated);
+    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+
+    fallbackReloadTimer.current = window.setTimeout(() => {
+      if (reloadForNewWorker.current) window.location.reload();
+    }, 5_000);
   }, [registration]);
 
   return {

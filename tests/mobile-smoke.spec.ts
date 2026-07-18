@@ -1,4 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 const openApp = async (page: Page) => {
   await page.goto('/');
@@ -75,6 +76,11 @@ test('changelog stays minimal and readable', async ({ page }) => {
   await expect(changelog.getByText(/appears once|erscheint einmal|v1\.3\.0/i)).toHaveCount(0);
   await expect(changelog.getByRole('button', { name: /got it|verstanden/i })).toBeVisible();
   await expectNoHorizontalOverflow(page);
+});
+
+test('generated patch worker keeps activation alive until it finishes', async () => {
+  const serviceWorker = await readFile('dist/sw.js', 'utf8');
+  expect(serviceWorker).toContain('event.waitUntil(self.skipWaiting());');
 });
 
 test('recipe editor contains no unfinished AI controls', async ({ page }) => {

@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-18-bring-direct-import',
-  version: '1.4.0',
+  id: '2026-07-18-update-reliability',
+  version: '1.4.1',
   en: {
     lines: [
-      'Shopping lists now open directly in Bring with one tap—no HTML file.',
+      'App patches now finish reliably instead of getting stuck while updating.',
     ],
   },
   de: {
     lines: [
-      'Einkaufslisten öffnen jetzt mit einem Tipp direkt in Bring – ohne HTML-Datei.',
+      'App-Patches werden jetzt zuverlässig abgeschlossen, statt beim Aktualisieren hängen zu bleiben.',
     ],
   },
 } as const;
