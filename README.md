@@ -12,7 +12,7 @@ Prerequisites: Node.js
 
 1. Install dependencies:
    `npm install`
-2. Create `.env.local` and set `VITE_GEMINI_API_KEY=your_key_here` to enable AI recipe details and watercolor artwork generation. Electron also accepts `GEMINI_API_KEY` or `API_KEY` from the system environment.
+2. Optional local development only: create `.env.local` and set `VITE_GEMINI_API_KEY=your_key_here` to enable automatic AI recipe details and artwork. Electron also accepts `GEMINI_API_KEY` or `API_KEY` from the system environment. Never use this in the public GitHub Pages build.
 3. Start the app:
    `npm run start`
 
@@ -37,7 +37,13 @@ The installed app works offline after its first successful load. Recipes and the
 
 Run `npm run build` locally to produce the same installable site in `dist`. That folder can also be hosted on any static HTTPS provider.
 
-> Do not put a private Gemini API key in a public Pages build. Variables beginning with `VITE_` are compiled into browser code. Use a server-side proxy before enabling AI features on a publicly hosted PiPlate instance.
+## ChatGPT Picture Connector
+
+The public PWA uses a key-free ChatGPT handoff. When you tap **Create with ChatGPT**, PiPlate prepares a watercolor prompt from the recipe and opens the phone share sheet (or copies the prompt and opens ChatGPT). The prompt is sent only after that tap. Save the generated picture, return to PiPlate, and choose **Change picture**.
+
+This connector stores no OpenAI API key, ChatGPT login, account identifier, or prompt in the repository. ChatGPT Plus can be used inside ChatGPT; it does not include OpenAI API usage. Fully automatic generation would require separate API billing and a server-side proxy.
+
+> Never put any AI-provider key in a public Pages build. Variables beginning with `VITE_` are compiled into browser code. Keep `.env` files local and use a secure backend for any automatic API integration.
 
 ## Build a Windows Executable
 

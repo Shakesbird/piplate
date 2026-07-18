@@ -5,11 +5,14 @@ import {
   ChevronUp,
   Download,
   GripVertical,
+  History,
   LayoutGrid,
   Minus,
   Plus,
   Search,
   Settings,
+  ShieldCheck,
+  Sparkles,
   Smartphone,
   Square,
   RefreshCw,
@@ -22,6 +25,9 @@ import WeeklyPlanner from './components/WeeklyPlanner';
 import DishCard from './components/DishCard';
 import { useLanguage } from './i18n';
 import { usePwa } from './hooks/usePwa';
+import ReleaseNotesModal from './components/ReleaseNotesModal';
+import { CURRENT_RELEASE } from './release';
+import { useChatGptConnector } from './hooks/useChatGptConnector';
 
 type ElectronIpcRenderer = {
   invoke: (channel: string) => Promise<boolean | void>;
@@ -51,7 +57,14 @@ const App: React.FC = () => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [draggedDay, setDraggedDay] = useState<string | null>(null);
   const [dragTargetDay, setDragTargetDay] = useState<string | null>(null);
+  const [showReleaseNotes, setShowReleaseNotes] = useState(() => localStorage.getItem('piplate-seen-release') !== CURRENT_RELEASE.id);
   const { applyUpdate, canInstall, install, isInstalled, isUpdating, updateAvailable } = usePwa();
+  const { enabled: chatGptHandoffEnabled, setEnabled: setChatGptHandoffEnabled } = useChatGptConnector();
+
+  const dismissReleaseNotes = () => {
+    localStorage.setItem('piplate-seen-release', CURRENT_RELEASE.id);
+    setShowReleaseNotes(false);
+  };
 
   const electronIpc = (window as WindowWithElectron).require?.('electron')?.ipcRenderer;
   const selectedRecipe = recipes.find(recipe => recipe.id === selectedRecipeId) || null;
@@ -256,6 +269,43 @@ const App: React.FC = () => {
         </div>
       </section>
 
+      <section className="mt-4 rounded-[2rem] border border-[#DED8CD] bg-white/80 p-5 sm:p-6 shadow-[0_18px_60px_rgba(47,43,37,0.06)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <span className="h-12 w-12 shrink-0 rounded-2xl bg-[#EEE7F4] text-[#775A8C] grid place-items-center"><Sparkles size={22} /></span>
+            <div>
+              <h2 className="font-display text-2xl">{t('chatGptConnector')}</h2>
+              <p className="mt-1 text-sm text-[#756E64] max-w-lg">{t('chatGptConnectorDescription')}</p>
+              <p className="mt-3 flex items-start gap-2 text-xs font-medium text-[#4E6B4E] max-w-lg">
+                <ShieldCheck size={16} className="mt-0.5 shrink-0" />
+                <span>{t('chatGptPrivacy')}</span>
+              </p>
+              <p className="mt-2 text-xs text-[#958D80] max-w-lg">{t('chatGptBilling')}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => void setChatGptHandoffEnabled(!chatGptHandoffEnabled)}
+            aria-pressed={chatGptHandoffEnabled}
+            className={`self-start sm:self-auto min-h-11 rounded-full px-5 text-sm font-semibold transition active:scale-95 ${chatGptHandoffEnabled ? 'bg-[#2D2A26] text-white' : 'bg-[#EEE8DD] text-[#756E64]'}`}
+          >
+            {chatGptHandoffEnabled ? t('connectorEnabled') : t('connectorDisabled')}
+          </button>
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-[2rem] border border-[#DED8CD] bg-white/80 p-5 sm:p-6 shadow-[0_18px_60px_rgba(47,43,37,0.06)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <span className="h-12 w-12 shrink-0 rounded-2xl bg-[#EEE7F4] text-[#775A8C] grid place-items-center"><History size={22} /></span>
+            <div>
+              <h2 className="font-display text-2xl">{t('currentPatch')}</h2>
+              <p className="mt-1 text-sm text-[#756E64]">{t('currentPatchDescription', { version: CURRENT_RELEASE.version })}</p>
+            </div>
+          </div>
+          <button onClick={() => setShowReleaseNotes(true)} className="self-start sm:self-auto min-h-11 rounded-full bg-[#EEE8DD] px-5 text-sm font-semibold text-[#4F4941] active:scale-95 transition">{t('showChangelog')}</button>
+        </div>
+      </section>
+
       <div className="mt-7">
         <h2 className="font-display text-2xl">{t('weekOrder')}</h2>
         <p className="mt-1 text-sm text-[#756E64]">{t('weekOrderDescription')}</p>
@@ -360,7 +410,10 @@ const App: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={updated => { void saveRecipe(updated); }}
         onDelete={handleDeleteRecipe}
+        chatGptHandoffEnabled={chatGptHandoffEnabled}
       />
+
+      <ReleaseNotesModal isOpen={showReleaseNotes} onClose={dismissReleaseNotes} />
 
       {updateAvailable && (
         <aside className="fixed z-[100] left-3 right-3 bottom-[5.75rem] md:left-auto md:right-5 md:bottom-5 md:w-[25rem] rounded-[1.5rem] border border-[#DED8CD] bg-[#FFFDF8] p-4 shadow-[0_22px_70px_rgba(45,42,38,0.24)]" role="status">
