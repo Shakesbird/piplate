@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowRightLeft, CalendarDays, Check, GripVertical, Plus, ShoppingCart, X } from 'lucide-react';
 import { DEFAULT_RECIPE_IMAGE, getRecipeImageSource, Recipe, WeeklyPlan } from '../types';
 import { useLanguage } from '../i18n';
-import { collectPlannerIngredients, openPlannerIngredientsInBring } from '../services/bringService';
+import { collectPlannerIngredients, preparePlannerIngredientsForBring } from '../services/bringService';
 
 interface WeeklyPlannerProps {
   recipes: Recipe[];
@@ -17,29 +17,62 @@ interface DragPayload {
   fromDay: string;
 }
 
+const BRING_LINK_REFRESH_MS = 8 * 60 * 1000;
+
 const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, onUpdatePlan, onMoveRecipe }) => {
   const { t, dayName } = useLanguage();
   const [activeDayForAdd, setActiveDayForAdd] = useState<string | null>(null);
   const [moveRecipe, setMoveRecipe] = useState<{ day: string; recipeId: string } | null>(null);
   const [dragTargetDay, setDragTargetDay] = useState<string | null>(null);
-  const [bringStatus, setBringStatus] = useState<'idle' | 'opening' | 'opened' | 'sign-in-required' | 'error'>('idle');
+  const [bringStatus, setBringStatus] = useState<'idle' | 'preparing' | 'opened' | 'sign-in-required' | 'error'>('idle');
+  const [bringLink, setBringLink] = useState<string | null>(null);
+  const [bringLinkRevision, setBringLinkRevision] = useState(0);
 
   const getRecipe = (id: string) => recipes.find(recipe => recipe.id === id);
   const plannedCount = Object.values(plan).reduce((total, ids) => total + ids.length, 0);
-  const plannerIngredients = collectPlannerIngredients(recipes, plan, dayOrder);
+  const plannerIngredients = useMemo(
+    () => collectPlannerIngredients(recipes, plan, dayOrder),
+    [recipes, plan, dayOrder],
+  );
+  const plannerShoppingTitle = t('plannerShoppingTitle');
 
-  const handleSendPlannerToBring = async () => {
-    if (plannerIngredients.length === 0 || bringStatus === 'opening') return;
-    setBringStatus('opening');
-    try {
-      const result = await openPlannerIngredientsInBring(t('plannerShoppingTitle'), plannerIngredients);
-      setBringStatus(result);
-      window.setTimeout(() => setBringStatus('idle'), 5000);
-    } catch (error) {
-      console.error('Could not send planner ingredients to Bring', error);
-      setBringStatus(error instanceof Error && error.message === 'bring/sign-in-required' ? 'sign-in-required' : 'error');
-      window.setTimeout(() => setBringStatus('idle'), 5000);
+  useEffect(() => {
+    let cancelled = false;
+    let refreshTimer: number | undefined;
+    if (plannerIngredients.length === 0) {
+      setBringLink(null);
+      setBringStatus('idle');
+      return () => { cancelled = true; };
     }
+
+    setBringLink(null);
+    setBringStatus('preparing');
+    void preparePlannerIngredientsForBring(plannerShoppingTitle, plannerIngredients)
+      .then(link => {
+        if (cancelled) return;
+        setBringLink(link);
+        setBringStatus('idle');
+        refreshTimer = window.setTimeout(
+          () => setBringLinkRevision(revision => revision + 1),
+          BRING_LINK_REFRESH_MS,
+        );
+      })
+      .catch(error => {
+        if (cancelled) return;
+        console.error('Could not prepare Bring import', error);
+        setBringStatus(error instanceof Error && error.message === 'bring/sign-in-required' ? 'sign-in-required' : 'error');
+      });
+
+    return () => {
+      cancelled = true;
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
+    };
+  }, [plannerIngredients, plannerShoppingTitle, bringLinkRevision]);
+
+  const handleBringLinkClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (import.meta.env.DEV && window.__PIPLATE_BRING_TEST__) event.preventDefault();
+    setBringStatus('opened');
+    window.setTimeout(() => setBringStatus('idle'), 5000);
   };
 
   const addRecipeToDay = (day: string, recipeId: string) => {
@@ -90,15 +123,27 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
             <span className="block text-2xl font-display text-[#35402D]">{plannedCount}</span>
             <span className="text-[10px] uppercase tracking-[0.18em] text-[#69745F]">{t('mealsPlanned')}</span>
           </div>
-          <button
-            onClick={() => void handleSendPlannerToBring()}
-            disabled={plannerIngredients.length === 0 || bringStatus === 'opening'}
-            className="min-h-12 rounded-full bg-[#526647] px-4 text-white flex items-center justify-center gap-2 text-sm font-semibold shadow-md active:scale-95 transition disabled:opacity-40"
-            aria-label={t('sendWeekToBring')}
-          >
-            {bringStatus === 'opened' ? <Check size={18} /> : <ShoppingCart size={18} />}
-            <span>{bringStatus === 'opening' ? t('openingBring') : bringStatus === 'opened' ? t('openedInBring') : t('sendWeekToBring')}</span>
-          </button>
+          {bringLink ? (
+            <a
+              href={bringLink}
+              onClick={handleBringLinkClick}
+              rel="external"
+              className="min-h-12 rounded-full bg-[#526647] px-4 text-white flex items-center justify-center gap-2 text-sm font-semibold shadow-md active:scale-95 transition"
+              aria-label={t('sendWeekToBring')}
+            >
+              {bringStatus === 'opened' ? <Check size={18} /> : <ShoppingCart size={18} />}
+              <span>{bringStatus === 'opened' ? t('openedInBring') : t('sendWeekToBring')}</span>
+            </a>
+          ) : (
+            <button
+              disabled
+              className="min-h-12 rounded-full bg-[#526647] px-4 text-white flex items-center justify-center gap-2 text-sm font-semibold shadow-md transition disabled:opacity-40"
+              aria-label={t('sendWeekToBring')}
+            >
+              <ShoppingCart size={18} />
+              <span>{bringStatus === 'preparing' ? t('preparingBring') : t('sendWeekToBring')}</span>
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-18-faster-recipe-images',
-  version: '1.5.1',
+  id: '2026-07-18-bring-direct-open',
+  version: '1.5.2',
   en: {
     lines: [
-      'Recipe pictures now load much faster on iPhone.',
+      'Planner ingredients now open directly in the Bring app on iPhone and Android.',
     ],
   },
   de: {
     lines: [
-      'Rezeptbilder laden auf dem iPhone jetzt deutlich schneller.',
+      'Zutaten aus dem Wochenplan öffnen jetzt direkt in Bring auf iPhone und Android.',
     ],
   },
 } as const;

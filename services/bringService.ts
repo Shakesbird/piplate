@@ -2,8 +2,6 @@ import { DatabaseReference, ref, remove, set } from 'firebase/database';
 import { firebaseAuth, firebaseDatabase, isBringConfigured } from '../firebase';
 import { Recipe, WeeklyPlan } from '../types';
 
-export type BringOpenResult = 'opened';
-
 export interface BringItem {
   itemId: string;
   spec?: string;
@@ -108,17 +106,18 @@ const scheduleRemoval = (importReference: DatabaseReference, importPath: string)
   }, IMPORT_LIFETIME_MS);
 };
 
-export const openPlannerIngredientsInBring = async (
+export const preparePlannerIngredientsForBring = async (
   title: string,
   ingredients: string[],
-): Promise<BringOpenResult> => {
+): Promise<string> => {
   const linkOutUrl = new URL(import.meta.env.BASE_URL, window.location.origin).toString();
   const recipe = createBringRecipePayload(title, ingredients, linkOutUrl);
 
   if (import.meta.env.DEV && window.__PIPLATE_BRING_TEST__) {
     const testRecipeUrl = 'https://piplate.example/bring-test.json';
-    await window.__PIPLATE_BRING_TEST__(recipe, buildBringDeeplinkUrl(testRecipeUrl));
-    return 'opened';
+    const testDeeplinkUrl = buildBringDeeplinkUrl(testRecipeUrl);
+    await window.__PIPLATE_BRING_TEST__(recipe, testDeeplinkUrl);
+    return testDeeplinkUrl;
   }
 
   if (!isBringConfigured || !firebaseDatabase || !DATABASE_URL) {
@@ -146,6 +145,5 @@ export const openPlannerIngredientsInBring = async (
   scheduleRemoval(importReference, importPath);
 
   const publicRecipeUrl = `${DATABASE_URL}/${importPath}/recipe.json`;
-  window.location.assign(buildBringDeeplinkUrl(publicRecipeUrl));
-  return 'opened';
+  return buildBringDeeplinkUrl(publicRecipeUrl);
 };

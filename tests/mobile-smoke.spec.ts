@@ -182,8 +182,10 @@ test('planner starts with today and keeps planned meals after reload', async ({ 
   await todaySection.getByRole('button', { name: /gnocci/i }).click();
   await expect(todaySection.getByRole('heading', { name: /gnocci/i })).toBeVisible();
 
-  await page.getByRole('button', { name: /open in bring|in bring öffnen/i }).click();
-  await expect(page.getByRole('button', { name: /open in bring|in bring öffnen/i })).toContainText(/bring opened|bring geöffnet/i);
+  const bringLink = page.getByRole('link', { name: /open in bring|in bring öffnen/i });
+  await expect(bringLink).toHaveAttribute('href', /api\.getbring\.com\/rest\/bringrecipes\/deeplink\?/);
+  await bringLink.click();
+  await expect(bringLink).toContainText(/bring opened|bring geöffnet/i);
   const bringImport = await page.evaluate(() => (
     window as Window & {
       __PIPLATE_LAST_BRING_IMPORT__?: {
