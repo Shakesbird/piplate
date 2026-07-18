@@ -25,3 +25,5 @@ secrets/
 # Logs and compiler caches
 *.log
 *.tsbuildinfo
+playwright-report/
+test-results/

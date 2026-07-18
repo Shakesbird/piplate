@@ -1,0 +1,29 @@
+name: Test Android and iPhone
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  mobile-browsers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Android and iPhone browser engines
+        run: npx playwright install --with-deps chromium webkit
+      - name: Build PiPlate
+        run: npm run build
+      - name: Test Galaxy S24 and iPhone layouts
+        run: npm run test:mobile

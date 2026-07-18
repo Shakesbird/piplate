@@ -4,16 +4,12 @@ import {
   Flame,
   Plus,
   Save,
-  Sparkles,
   Trash2,
   Upload,
   Users,
-  Wand2,
   X,
 } from 'lucide-react';
 import { DEFAULT_RECIPE_IMAGE, NutritionalValue, Recipe } from '../types';
-import { generateRecipeDetails, generateRecipeImage, isAiConfigured } from '../services/geminiService';
-import { handoffArtworkToChatGpt } from '../services/chatGptService';
 import { useLanguage } from '../i18n';
 
 interface DishModalProps {
@@ -22,7 +18,6 @@ interface DishModalProps {
   onClose: () => void;
   onSave: (recipe: Recipe) => void;
   onDelete: (id: string) => void;
-  chatGptHandoffEnabled: boolean;
 }
 
 const compressImage = (file: File): Promise<string> => new Promise((resolve, reject) => {
@@ -47,11 +42,9 @@ const compressImage = (file: File): Promise<string> => new Promise((resolve, rej
   reader.onerror = reject;
 });
 
-const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, onDelete, chatGptHandoffEnabled }) => {
-  const { language, t } = useLanguage();
+const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, onDelete }) => {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState<any>({});
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,7 +68,10 @@ const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, 
       });
       setIsEditing(true);
     }
-  }, [isOpen, recipe]);
+  // Depend on the identity of the opened recipe, not the object reference. The
+  // IndexedDB hydration can replace recipe objects after the modal opens; that
+  // must not cancel an edit that the user has just started.
+  }, [isOpen, recipe?.id]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -134,56 +130,6 @@ const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, 
     }
   };
 
-  const handleMagicFill = async () => {
-    if (!formData.title) return;
-    setIsGenerating(true);
-    const generated = await generateRecipeDetails(formData.title, language);
-    if (generated) {
-      setFormData((current: any) => ({
-        ...current,
-        ...generated,
-        nutrition: { ...current.nutrition, ...generated.nutrition },
-      }));
-    }
-    setIsGenerating(false);
-  };
-
-  const handleGenerateImage = async () => {
-    if (!formData.title?.trim()) return;
-    if (!isAiConfigured()) {
-      if (!chatGptHandoffEnabled) {
-        alert(t('chatGptConnectorDisabled'));
-        return;
-      }
-
-      setIsGeneratingImage(true);
-      try {
-        const result = await handoffArtworkToChatGpt(
-          formData.title,
-          formData.ingredients || [],
-          language,
-        );
-        if (result === 'shared') alert(t('chatGptShared'));
-        if (result === 'copied') alert(t('chatGptCopied'));
-      } catch (error) {
-        console.error('ChatGPT prompt handoff failed', error);
-        alert(t('chatGptHandoffError'));
-      } finally {
-        setIsGeneratingImage(false);
-      }
-      return;
-    }
-
-    setIsGeneratingImage(true);
-    const imageUri = await generateRecipeImage(formData.title, formData.ingredients || []);
-    if (imageUri) {
-      setFormData((current: any) => ({ ...current, imageUri }));
-    } else {
-      alert(t('artworkError'));
-    }
-    setIsGeneratingImage(false);
-  };
-
   const save = () => {
     if (!formData.title?.trim() || !formData.id) return;
     const recipeToSave: Recipe = {
@@ -221,8 +167,8 @@ const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, 
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-label={recipe ? recipe.title : t('newRecipe')}>
-      <div className="relative bg-[#FFFDF8] w-full max-w-6xl h-[100dvh] sm:h-[94dvh] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl">
+    <div className="fixed inset-0 z-[100] overflow-x-hidden bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-label={recipe ? recipe.title : t('newRecipe')}>
+      <div className="relative min-w-0 bg-[#FFFDF8] w-full max-w-6xl h-[100dvh] sm:h-[94dvh] sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl" style={{ width: '100%', maxWidth: '72rem' }}>
         <header className="shrink-0 min-h-[68px] safe-top px-4 sm:px-6 flex items-center gap-3 border-b border-[#E8E1D6] bg-[#FFFDF8]/95 backdrop-blur-xl z-30">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#958D80] font-semibold">
@@ -248,25 +194,15 @@ const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, 
         </header>
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-          <section className="grid lg:grid-cols-[1.08fr_.92fr] border-b border-[#E8E1D6]">
-            <div className="relative min-h-[260px] sm:min-h-[330px] lg:min-h-[430px] bg-[#E3DCCF] overflow-hidden group">
-              <img src={formData.imageUri || DEFAULT_RECIPE_IMAGE} onError={event => { event.currentTarget.src = DEFAULT_RECIPE_IMAGE; }} alt={formData.title || 'Recipe'} className="absolute inset-0 h-full w-full object-cover" />
+          <section className="grid min-w-0 lg:grid-cols-[1.08fr_.92fr] border-b border-[#E8E1D6]">
+            <div className="relative min-w-0 max-w-full min-h-[260px] sm:min-h-[330px] lg:min-h-[430px] bg-[#E3DCCF] overflow-hidden group">
+              <img src={formData.imageUri || DEFAULT_RECIPE_IMAGE} onError={event => { event.currentTarget.src = DEFAULT_RECIPE_IMAGE; }} alt={formData.title || 'Recipe'} className="absolute inset-0 block h-full w-full max-w-full object-cover" style={{ width: '100%', maxWidth: '100%' }} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
               {isEditing && (
                 <>
                   <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
                     <button onClick={() => fileInputRef.current?.click()} className="h-12 px-4 rounded-full bg-white/95 text-[#2D2A26] flex items-center gap-2 font-semibold text-sm shadow-lg active:scale-95 transition">
                       <Upload size={18} /> {t('changePicture')}
-                    </button>
-                    <button
-                      onClick={() => void handleGenerateImage()}
-                      disabled={isGeneratingImage || !formData.title?.trim()}
-                      className="h-12 px-4 rounded-full bg-[#D95D39] text-white flex items-center gap-2 font-semibold text-sm shadow-lg active:scale-95 transition disabled:opacity-50"
-                    >
-                      <Sparkles size={18} className={isGeneratingImage ? 'animate-pulse' : ''} />
-                      {isGeneratingImage
-                        ? (isAiConfigured() ? t('painting') : t('openingChatGpt'))
-                        : (isAiConfigured() ? t('generatePicture') : t('createWithChatGpt'))}
                     </button>
                   </div>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
@@ -277,10 +213,7 @@ const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, 
             <div className="p-5 sm:p-8 lg:p-10 flex flex-col justify-center bg-[#FFFDF8]">
               <p className="eyebrow">{t('fromYourKitchen')}</p>
               {isEditing ? (
-                <div className="mt-3 flex gap-2 items-start">
-                  <input name="title" value={formData.title} onChange={handleInputChange} placeholder={t('recipeName')} autoFocus={!recipe} className="flex-1 min-w-0 bg-transparent border-b-2 border-[#D7D0C4] focus:border-[#D95D39] outline-none py-2 font-display text-3xl sm:text-4xl leading-tight" />
-                  <button onClick={() => void handleMagicFill()} disabled={isGenerating || !formData.title} className="mt-1 touch-button shrink-0 bg-[#EEE7F4] text-[#775A8C] disabled:opacity-40" aria-label={t('aiFill')}><Wand2 size={19} className={isGenerating ? 'animate-spin' : ''} /></button>
-                </div>
+                <input name="title" value={formData.title} onChange={handleInputChange} placeholder={t('recipeName')} autoFocus={!recipe} className="mt-3 w-full bg-transparent border-b-2 border-[#D7D0C4] focus:border-[#D95D39] outline-none py-2 font-display text-3xl sm:text-4xl leading-tight" />
               ) : (
                 <h1 className="mt-3 font-display text-4xl sm:text-5xl leading-[0.98] text-[#2D2A26]">{formData.title}</h1>
               )}

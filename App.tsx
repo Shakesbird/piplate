@@ -11,8 +11,6 @@ import {
   Plus,
   Search,
   Settings,
-  ShieldCheck,
-  Sparkles,
   Smartphone,
   Square,
   RefreshCw,
@@ -27,7 +25,6 @@ import { useLanguage } from './i18n';
 import { usePwa } from './hooks/usePwa';
 import ReleaseNotesModal from './components/ReleaseNotesModal';
 import { CURRENT_RELEASE } from './release';
-import { useChatGptConnector } from './hooks/useChatGptConnector';
 
 type ElectronIpcRenderer = {
   invoke: (channel: string) => Promise<boolean | void>;
@@ -59,7 +56,6 @@ const App: React.FC = () => {
   const [dragTargetDay, setDragTargetDay] = useState<string | null>(null);
   const [showReleaseNotes, setShowReleaseNotes] = useState(() => localStorage.getItem('piplate-seen-release') !== CURRENT_RELEASE.id);
   const { applyUpdate, canInstall, install, isInstalled, isUpdating, updateAvailable } = usePwa();
-  const { enabled: chatGptHandoffEnabled, setEnabled: setChatGptHandoffEnabled } = useChatGptConnector();
 
   const dismissReleaseNotes = () => {
     localStorage.setItem('piplate-seen-release', CURRENT_RELEASE.id);
@@ -272,30 +268,6 @@ const App: React.FC = () => {
       <section className="mt-4 rounded-[2rem] border border-[#DED8CD] bg-white/80 p-5 sm:p-6 shadow-[0_18px_60px_rgba(47,43,37,0.06)]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
-            <span className="h-12 w-12 shrink-0 rounded-2xl bg-[#EEE7F4] text-[#775A8C] grid place-items-center"><Sparkles size={22} /></span>
-            <div>
-              <h2 className="font-display text-2xl">{t('chatGptConnector')}</h2>
-              <p className="mt-1 text-sm text-[#756E64] max-w-lg">{t('chatGptConnectorDescription')}</p>
-              <p className="mt-3 flex items-start gap-2 text-xs font-medium text-[#4E6B4E] max-w-lg">
-                <ShieldCheck size={16} className="mt-0.5 shrink-0" />
-                <span>{t('chatGptPrivacy')}</span>
-              </p>
-              <p className="mt-2 text-xs text-[#958D80] max-w-lg">{t('chatGptBilling')}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => void setChatGptHandoffEnabled(!chatGptHandoffEnabled)}
-            aria-pressed={chatGptHandoffEnabled}
-            className={`self-start sm:self-auto min-h-11 rounded-full px-5 text-sm font-semibold transition active:scale-95 ${chatGptHandoffEnabled ? 'bg-[#2D2A26] text-white' : 'bg-[#EEE8DD] text-[#756E64]'}`}
-          >
-            {chatGptHandoffEnabled ? t('connectorEnabled') : t('connectorDisabled')}
-          </button>
-        </div>
-      </section>
-
-      <section className="mt-4 rounded-[2rem] border border-[#DED8CD] bg-white/80 p-5 sm:p-6 shadow-[0_18px_60px_rgba(47,43,37,0.06)]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
             <span className="h-12 w-12 shrink-0 rounded-2xl bg-[#EEE7F4] text-[#775A8C] grid place-items-center"><History size={22} /></span>
             <div>
               <h2 className="font-display text-2xl">{t('currentPatch')}</h2>
@@ -397,7 +369,7 @@ const App: React.FC = () => {
         </main>
       </div>
 
-      <nav className="mobile-nav md:hidden" aria-label={t('mobileNavigation')}>
+      <nav className="mobile-nav md:hidden" style={{ pointerEvents: showReleaseNotes || isModalOpen ? 'none' : 'auto' }} aria-label={t('mobileNavigation')} aria-hidden={showReleaseNotes || isModalOpen}>
         <button onClick={() => setView('GALLERY')} className={`mobile-nav-item ${view === 'GALLERY' ? 'mobile-nav-active' : ''}`}><LayoutGrid size={21} /><span>{t('recipes')}</span></button>
         <button onClick={() => setView('PLANNER')} className={`mobile-nav-item ${view === 'PLANNER' ? 'mobile-nav-active' : ''}`}><CalendarDays size={21} /><span>{t('planner')}</span></button>
         <button onClick={handleAddNew} className="mobile-add" aria-label={t('addRecipe')}><Plus size={26} /></button>
@@ -410,7 +382,6 @@ const App: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={updated => { void saveRecipe(updated); }}
         onDelete={handleDeleteRecipe}
-        chatGptHandoffEnabled={chatGptHandoffEnabled}
       />
 
       <ReleaseNotesModal isOpen={showReleaseNotes} onClose={dismissReleaseNotes} />
