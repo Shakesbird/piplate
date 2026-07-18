@@ -14,7 +14,7 @@ PiPlate currently keeps recipes, the weekly plan, and settings in IndexedDB on o
 - `households/{householdId}`: name, members, created and updated timestamps.
 - `households/{householdId}/recipes/{recipeId}`: recipe fields, image reference, revision, updated timestamp, and deletion tombstone.
 - `households/{householdId}/planner/{weekId}`: the seven-day recipe-ID lists, revision, and updated timestamp.
-- `households/{householdId}/settings/shared`: shared day order and other household-wide preferences.
+- `households/{householdId}/settings/shared`: household-wide preferences that affect shared data. The planner day sequence is derived from each device's current local day and is not synchronized.
 
 ## Required behavior
 

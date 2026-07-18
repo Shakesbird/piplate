@@ -122,6 +122,8 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
           return (
             <section
               key={day}
+              data-planner-day={day}
+              data-today={dayIndex === 0 ? 'true' : undefined}
               onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDragTargetDay(day); }}
               onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragTargetDay(null); }}
               onDrop={event => void handleDrop(event, day)}
@@ -130,7 +132,10 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
               <div className="min-h-[70px] px-4 md:px-6 flex items-center gap-3 border-b border-[#EEE8DD]">
                 <span className="h-10 w-10 rounded-full grid place-items-center bg-[#F2ECE3] text-sm font-semibold text-[#756E64]">{String(dayIndex + 1).padStart(2, '0')}</span>
                 <div className="flex-1">
-                  <h2 className="font-display text-xl md:text-2xl text-[#2D2A26]">{dayName(day)}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-display text-xl md:text-2xl text-[#2D2A26]">{dayName(day)}</h2>
+                    {dayIndex === 0 && <span className="rounded-full bg-[#E2E8D7] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#526647]">{t('today')}</span>}
+                  </div>
                   <p className="text-xs text-[#958D80]">{dayRecipes.length === 0 ? t('noMeals') : dayRecipes.length === 1 ? t('oneMeal') : t('manyMeals', { count: dayRecipes.length })}</p>
                 </div>
                 <button
@@ -154,9 +159,9 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
                         draggable
                         onDragStart={event => handleDragStart(event, day, recipe.id)}
                         onDragEnd={() => setDragTargetDay(null)}
-                        className="relative w-[150px] sm:w-[180px] md:w-[210px] shrink-0 aspect-[4/3] rounded-[1.2rem] overflow-hidden bg-[#DDD5C8] snap-start shadow-sm group"
+                        className="relative min-w-0 w-[150px] max-w-full sm:w-[180px] md:w-[210px] shrink-0 aspect-[4/3] rounded-[1.2rem] overflow-hidden bg-[#DDD5C8] snap-start shadow-sm group"
                       >
-                        <img src={recipe.imageUri} alt="" className="h-full w-full object-cover" />
+                        <img src={recipe.imageUri} alt="" className="block h-full w-full max-w-full object-cover" style={{ width: '100%', maxWidth: '100%' }} />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10" />
                         <div className="absolute top-2 left-2 hidden md:flex h-8 w-8 rounded-full bg-white/85 items-center justify-center cursor-grab"><GripVertical size={15} /></div>
                         <div className="absolute top-2 right-2 flex gap-1">

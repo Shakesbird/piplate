@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import { DAYS_OF_WEEK, normalizeDayOrder, Recipe, WeeklyPlan } from '../types';
+import { getTodayFirstDayOrder, Recipe, WeeklyPlan } from '../types';
 
 const MOCK_RECIPES: Recipe[] = [
   {
@@ -158,9 +158,30 @@ const MOCK_RECIPES: Recipe[] = [
 export const useRecipes = () => {
   const recipes = useLiveQuery(() => db.recipes.toArray()) || [];
   const weeklyPlanData = useLiveQuery(() => db.settings.get('weeklyPlan'));
-  const dayOrderData = useLiveQuery(() => db.settings.get('dayOrder'));
   const weeklyPlan: WeeklyPlan = weeklyPlanData?.value || {};
-  const dayOrder = normalizeDayOrder(dayOrderData?.value);
+  const [dayOrder, setDayOrder] = useState(getTodayFirstDayOrder);
+
+  useEffect(() => {
+    let midnightTimer: number | undefined;
+
+    const scheduleNextDay = () => {
+      setDayOrder(getTodayFirstDayOrder());
+      const nextMidnight = new Date();
+      nextMidnight.setHours(24, 0, 1, 0);
+      midnightTimer = window.setTimeout(scheduleNextDay, nextMidnight.getTime() - Date.now());
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') setDayOrder(getTodayFirstDayOrder());
+    };
+
+    scheduleNextDay();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      if (midnightTimer !== undefined) window.clearTimeout(midnightTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     const initDb = async () => {
@@ -174,9 +195,6 @@ export const useRecipes = () => {
           if (recipeCount === 0) await db.recipes.bulkAdd(MOCK_RECIPES);
           await db.settings.put({ key: 'initialSeedComplete', value: true });
         }
-
-        const storedDayOrder = await db.settings.get('dayOrder');
-        if (!storedDayOrder) await db.settings.put({ key: 'dayOrder', value: DAYS_OF_WEEK });
       });
     };
     void initDb().catch(error => console.error('Failed to initialize PiPlate data safely:', error));
@@ -196,14 +214,6 @@ export const useRecipes = () => {
       await db.settings.put({ key: 'weeklyPlan', value: plan });
     } catch (e) {
       console.error('Failed to save weekly plan:', e);
-    }
-  };
-
-  const updateDayOrder = async (nextDayOrder: string[]) => {
-    try {
-      await db.settings.put({ key: 'dayOrder', value: normalizeDayOrder(nextDayOrder) });
-    } catch (e) {
-      console.error('Failed to update day order:', e);
     }
   };
 
@@ -263,5 +273,5 @@ export const useRecipes = () => {
     }
   };
 
-  return { recipes, weeklyPlan, dayOrder, saveRecipe, deleteRecipe, updateWeeklyPlan, moveRecipeBetweenDays, updateDayOrder };
+  return { recipes, weeklyPlan, dayOrder, saveRecipe, deleteRecipe, updateWeeklyPlan, moveRecipeBetweenDays };
 };

@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   CalendarDays,
-  ChevronDown,
-  ChevronUp,
   Download,
-  GripVertical,
   History,
   LayoutGrid,
   Minus,
@@ -36,7 +33,7 @@ type WindowWithElectron = Window & {
 };
 
 const App: React.FC = () => {
-  const { language, setLanguage, t, dayName } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const {
     recipes,
     weeklyPlan,
@@ -45,15 +42,12 @@ const App: React.FC = () => {
     deleteRecipe,
     updateWeeklyPlan,
     moveRecipeBetweenDays,
-    updateDayOrder,
   } = useRecipes();
   const [view, setView] = useState<ViewState>('GALLERY');
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMaximized, setIsMaximized] = useState(false);
-  const [draggedDay, setDraggedDay] = useState<string | null>(null);
-  const [dragTargetDay, setDragTargetDay] = useState<string | null>(null);
   const [showReleaseNotes, setShowReleaseNotes] = useState(() => localStorage.getItem('piplate-seen-release') !== CURRENT_RELEASE.id);
   const { applyUpdate, canInstall, install, isInstalled, isUpdating, updateAvailable } = usePwa();
 
@@ -86,35 +80,6 @@ const App: React.FC = () => {
     if (!current.includes(recipeId)) {
       await updateWeeklyPlan(day, [...current, recipeId]);
     }
-  };
-
-  const handleMoveDay = async (day: string, direction: -1 | 1) => {
-    const index = dayOrder.indexOf(day);
-    const nextIndex = index + direction;
-    if (index < 0 || nextIndex < 0 || nextIndex >= dayOrder.length) return;
-
-    const nextOrder = [...dayOrder];
-    [nextOrder[index], nextOrder[nextIndex]] = [nextOrder[nextIndex], nextOrder[index]];
-    await updateDayOrder(nextOrder);
-  };
-
-  const handleDayDrop = async (targetDay: string) => {
-    if (!draggedDay || draggedDay === targetDay) {
-      setDraggedDay(null);
-      setDragTargetDay(null);
-      return;
-    }
-
-    const nextOrder = [...dayOrder];
-    const sourceIndex = nextOrder.indexOf(draggedDay);
-    const targetIndex = nextOrder.indexOf(targetDay);
-    if (sourceIndex === -1 || targetIndex === -1) return;
-
-    nextOrder.splice(sourceIndex, 1);
-    nextOrder.splice(targetIndex, 0, draggedDay);
-    await updateDayOrder(nextOrder);
-    setDraggedDay(null);
-    setDragTargetDay(null);
   };
 
   useEffect(() => {
@@ -278,49 +243,6 @@ const App: React.FC = () => {
         </div>
       </section>
 
-      <div className="mt-7">
-        <h2 className="font-display text-2xl">{t('weekOrder')}</h2>
-        <p className="mt-1 text-sm text-[#756E64]">{t('weekOrderDescription')}</p>
-      </div>
-
-      <div className="mt-4 rounded-[2rem] border border-[#DED8CD] bg-white/80 shadow-[0_18px_60px_rgba(47,43,37,0.06)] overflow-hidden">
-        {dayOrder.map((day, index) => {
-          const isDragged = draggedDay === day;
-          const isTarget = dragTargetDay === day && draggedDay !== day;
-          return (
-            <div
-              key={day}
-              draggable
-              onDragStart={() => { setDraggedDay(day); setDragTargetDay(day); }}
-              onDragOver={event => { event.preventDefault(); setDragTargetDay(day); }}
-              onDrop={() => void handleDayDrop(day)}
-              onDragEnd={() => { setDraggedDay(null); setDragTargetDay(null); }}
-              className={`min-h-[76px] flex items-center gap-3 px-4 sm:px-6 border-b border-[#EEE8DD] last:border-b-0 transition ${isDragged ? 'opacity-50' : ''} ${isTarget ? 'bg-[#F5E9DF]' : ''}`}
-            >
-              <GripVertical size={19} className="hidden md:block text-[#B1A99C] cursor-grab" />
-              <div className="h-10 w-10 rounded-full bg-[#F2ECE3] grid place-items-center text-sm font-semibold text-[#756E64]">{index + 1}</div>
-              <div className="flex-1 min-w-0">
-                <span className="block text-xs uppercase tracking-[0.18em] text-[#A0988B]">{t('day')}</span>
-                <span className="font-semibold text-[#2D2A26]">{dayName(day)}</span>
-              </div>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => void handleMoveDay(day, -1)}
-                  disabled={index === 0}
-                  className="touch-button bg-[#F2ECE3] text-[#5F584F] disabled:opacity-30"
-                  aria-label={t('moveEarlier', { day: dayName(day) })}
-                ><ChevronUp size={19} /></button>
-                <button
-                  onClick={() => void handleMoveDay(day, 1)}
-                  disabled={index === dayOrder.length - 1}
-                  className="touch-button bg-[#F2ECE3] text-[#5F584F] disabled:opacity-30"
-                  aria-label={t('moveLater', { day: dayName(day) })}
-                ><ChevronDown size={19} /></button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 

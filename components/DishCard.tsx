@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CalendarPlus, Check, Flame, Users, X } from 'lucide-react';
-import { DAYS_OF_WEEK, DEFAULT_RECIPE_IMAGE, Recipe } from '../types';
+import { DEFAULT_RECIPE_IMAGE, getTodayFirstDayOrder, Recipe } from '../types';
 import { useLanguage } from '../i18n';
 
 interface DishCardProps {
@@ -13,6 +13,7 @@ const DishCard: React.FC<DishCardProps> = ({ recipe, onClick, onAddToDay }) => {
   const { t, dayName } = useLanguage();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [savedDay, setSavedDay] = useState<string | null>(null);
+  const dayOrder = getTodayFirstDayOrder();
 
   const handleAddToDay = async (event: React.MouseEvent<HTMLButtonElement>, day: string) => {
     event.stopPropagation();
@@ -83,7 +84,7 @@ const DishCard: React.FC<DishCardProps> = ({ recipe, onClick, onAddToDay }) => {
             <button onClick={togglePicker} className="h-9 w-9 shrink-0 rounded-full grid place-items-center bg-[#EEE8DD]" aria-label={t('closeDayPicker')}><X size={16} /></button>
           </div>
           <div className="grid grid-cols-2 gap-1.5 md:gap-2 flex-1">
-            {DAYS_OF_WEEK.map(day => (
+            {dayOrder.map(day => (
               <button
                 key={day}
                 onClick={event => void handleAddToDay(event, day)}

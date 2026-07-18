@@ -1,20 +1,20 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-18-remove-unfinished-ai',
-  version: '1.2.2',
+  id: '2026-07-18-today-first-planner',
+  version: '1.2.3',
   en: {
     eyebrow: 'New PiPlate patch',
-    title: 'A cleaner recipe editor',
+    title: 'Today comes first',
     summary: 'This message appears once for each installed patch. You can reopen it from Settings.',
     notes: [
-      'The unfinished picture generator and AI recipe-fill controls have been removed for now.',
+      'The planner now starts with today automatically, so the current day is always at the top.',
     ],
   },
   de: {
     eyebrow: 'Neuer PiPlate-Patch',
-    title: 'Ein aufgeräumter Rezepteditor',
+    title: 'Heute steht an erster Stelle',
     summary: 'Dieser Hinweis erscheint einmal pro installiertem Patch. In den Einstellungen kannst du ihn erneut öffnen.',
     notes: [
-      'Der unfertige Bildgenerator und die KI-Rezeptbefüllung wurden vorerst entfernt.',
+      'Der Wochenplan beginnt jetzt automatisch mit dem heutigen Tag.',
     ],
   },
 } as const;
