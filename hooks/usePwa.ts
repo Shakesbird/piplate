@@ -22,6 +22,24 @@ const getIosBrowser = () => {
   return { isIos, isIosSafari: isSafari };
 };
 
+const reloadWithoutStuckAppCache = async (registration: ServiceWorkerRegistration) => {
+  try {
+    await registration.unregister();
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames
+        .filter(cacheName => cacheName.startsWith('piplate-'))
+        .map(cacheName => caches.delete(cacheName)));
+    }
+  } catch (error) {
+    console.error('PiPlate could not clear the stuck update cache:', error);
+  } finally {
+    const appUrl = new URL(import.meta.env.BASE_URL, window.location.origin);
+    appUrl.searchParams.set('repaired', String(Date.now()));
+    window.location.replace(appUrl.toString());
+  }
+};
+
 export const usePwa = () => {
   const { isIos, isIosSafari } = getIosBrowser();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -151,8 +169,10 @@ export const usePwa = () => {
     waitingWorker.postMessage({ type: 'SKIP_WAITING' });
 
     fallbackReloadTimer.current = window.setTimeout(() => {
-      if (reloadForNewWorker.current) window.location.reload();
-    }, 5_000);
+      if (!reloadForNewWorker.current) return;
+      reloadForNewWorker.current = false;
+      void reloadWithoutStuckAppCache(activeRegistration);
+    }, 8_000);
   }, [registration]);
 
   return {

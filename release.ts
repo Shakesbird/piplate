@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-18-bring-direct-open',
-  version: '1.5.2',
+  id: '2026-07-19-self-repairing-updates',
+  version: '1.5.3',
   en: {
     lines: [
-      'Planner ingredients now open directly in the Bring app on iPhone and Android.',
+      'Stuck app updates now repair themselves automatically.',
     ],
   },
   de: {
     lines: [
-      'Zutaten aus dem Wochenplan öffnen jetzt direkt in Bring auf iPhone und Android.',
+      'Festhängende App-Updates reparieren sich jetzt automatisch.',
     ],
   },
 } as const;

@@ -81,13 +81,24 @@ test('changelog stays minimal and readable', async ({ page }) => {
 test('generated patch worker keeps activation alive until it finishes', async () => {
   const serviceWorker = await readFile('dist/sw.js', 'utf8');
   expect(serviceWorker).toContain('event.waitUntil(self.skipWaiting());');
+  expect(serviceWorker).toContain("new Request(url, { cache: 'reload' })");
+  expect(serviceWorker).not.toContain('cache.addAll(PRECACHE_URLS)');
   expect(serviceWorker).not.toContain('recipe-images/');
 });
 
+test('stuck updates fall back to the safe cache repair', async () => {
+  const pwaHook = await readFile('hooks/usePwa.ts', 'utf8');
+  expect(pwaHook).toContain('await registration.unregister();');
+  expect(pwaHook).toContain("cacheName.startsWith('piplate-')");
+  expect(pwaHook).toContain('window.location.replace(appUrl.toString());');
+});
+
 test('recipe previews use small, prioritised WebP images', async ({ page }) => {
-  await expect.poll(() => page.evaluate(() => [...document.querySelectorAll<HTMLImageElement>('article img')]
-    .slice(0, 4)
-    .every(image => image.complete && image.naturalWidth > 0))).toBe(true);
+  await expect.poll(() => page.evaluate(() => {
+    const images = [...document.querySelectorAll<HTMLImageElement>('article img')];
+    return images.length === 10
+      && images.slice(0, 4).every(image => image.complete && image.naturalWidth > 0);
+  })).toBe(true);
 
   const previews = await page.evaluate(() => [...document.querySelectorAll<HTMLImageElement>('article img')].map(image => ({
     src: image.src,

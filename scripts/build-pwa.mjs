@@ -28,7 +28,7 @@ for (const file of files) {
   hash.update(await readFile(file));
 }
 const version = hash.digest('hex').slice(0, 12);
-const precacheUrls = ['./', ...files.map(file => `./${relative(distDir, file).split(sep).join('/')}`)];
+const precacheUrls = files.map(file => `./${relative(distDir, file).split(sep).join('/')}`);
 const optionalExternalUrls = [
   'https://cdn.tailwindcss.com/',
   'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap',
@@ -43,7 +43,11 @@ const OPTIONAL_EXTERNAL_URLS = ${JSON.stringify(optionalExternalUrls, null, 2)};
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(PRECACHE).then(async cache => {
-    await cache.addAll(PRECACHE_URLS);
+    await Promise.all(PRECACHE_URLS.map(async url => {
+      const response = await fetch(new Request(url, { cache: 'reload' }));
+      if (!response.ok) throw new Error(\`Could not precache \${url}: \${response.status}\`);
+      await cache.put(url, response);
+    }));
     await Promise.allSettled(OPTIONAL_EXTERNAL_URLS.map(async url => {
       const request = new Request(url, { mode: 'no-cors' });
       const response = await fetch(request);
