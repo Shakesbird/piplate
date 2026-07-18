@@ -1,0 +1,7 @@
+{
+  "name": "PiPlate - Minimalist Recipe Manager",
+  "description": "A touch-optimized recipe manager for Raspberry Pi with weekly planning and AI-assisted recipe generation.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

@@ -1,0 +1,21 @@
+# Dependencies and generated builds
+node_modules/
+dist/
+release/
+
+# Local app and test data
+.piplate-dev-data/
+android-test-results/
+
+# Local credentials and environment configuration
+.env
+.env.*
+!.env.example
+
+# Codex workspace metadata
+.agents/
+.codex/
+
+# Logs and compiler caches
+*.log
+*.tsbuildinfo

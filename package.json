@@ -1,0 +1,78 @@
+{
+  "name": "piplate",
+  "version": "1.0.0",
+  "description": "Minimalist Recipe Manager for Raspberry Pi",
+  "main": "electron.js",
+  "scripts": {
+    "generate:pwa-icons": "node scripts/generate-pwa-icons.mjs",
+    "predev": "npm run generate:pwa-icons",
+    "dev": "vite",
+    "electron:dev": "wait-on tcp:5173 && .\\node_modules\\.bin\\electron.cmd .",
+    "prebuild": "npm run generate:pwa-icons",
+    "build": "tsc && vite build && node scripts/build-pwa.mjs",
+    "preview": "vite preview",
+    "start": "concurrently -k \"npm run dev\" \"npm run electron:dev\"",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win --x64",
+    "make:exe": "npm run dist:win",
+    "package:win": "npm run dist:win"
+  },
+  "keywords": [
+    "raspberry-pi",
+    "recipe",
+    "kitchen",
+    "touch"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@google/genai": "^1.41.0",
+    "dexie": "^4.0.1",
+    "dexie-react-hooks": "^1.1.7",
+    "lucide-react": "^0.564.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.piplate.app",
+    "productName": "PiPlate",
+    "directories": {
+      "output": "release"
+    },
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "files": [
+      "dist/**/*",
+      "electron.js",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "synopsis": "Recipe Manager"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "mac": {
+      "target": "dmg"
+    }
+  }
+}
