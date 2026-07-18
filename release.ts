@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-18-recipe-recovery',
-  version: '1.3.1',
+  id: '2026-07-18-bring-direct-import',
+  version: '1.4.0',
   en: {
     lines: [
-      'Recipe storage is now checked and repaired automatically after updates.',
+      'Shopping lists now open directly in Bring with one tap—no HTML file.',
     ],
   },
   de: {
     lines: [
-      'Der Rezeptspeicher wird nach Updates automatisch geprüft und repariert.',
+      'Einkaufslisten öffnen jetzt mit einem Tipp direkt in Bring – ohne HTML-Datei.',
     ],
   },
 } as const;

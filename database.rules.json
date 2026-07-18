@@ -1,0 +1,24 @@
+{
+  "rules": {
+    "bringImports": {
+      "$importId": {
+        ".read": "data.child('expiresAt').val() > now",
+        ".write": "auth != null && ((!data.exists() && newData.child('ownerId').val() === auth.uid && newData.child('expiresAt').isNumber() && newData.child('expiresAt').val() > now && newData.child('expiresAt').val() <= now + 600000) || (data.child('ownerId').val() === auth.uid && !newData.exists()))",
+        "ownerId": {
+          ".validate": "newData.isString()"
+        },
+        "expiresAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "recipe": {
+          ".validate": "newData.hasChildren(['author', 'linkOutUrl', 'name', 'items']) && newData.child('items').hasChildren()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    ".read": false,
+    ".write": false
+  }
+}

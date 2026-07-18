@@ -5,7 +5,11 @@ const openApp = async (page: Page) => {
   await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
   const releaseDialog = page.getByRole('dialog');
   await expect(releaseDialog).toBeVisible();
-  await releaseDialog.getByRole('button', { name: /got it|verstanden/i }).click();
+  const dismissButton = releaseDialog.getByRole('button', { name: /got it|verstanden/i });
+  for (let attempt = 0; attempt < 3 && await releaseDialog.isVisible(); attempt += 1) {
+    await dismissButton.click();
+    await releaseDialog.waitFor({ state: 'hidden', timeout: 2_000 }).catch(() => undefined);
+  }
   await expect(releaseDialog).toBeHidden();
 };
 
@@ -47,7 +51,15 @@ const openSettings = async (page: Page) => {
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    (window as Window & { __PIPLATE_SYNC_TEST__?: boolean }).__PIPLATE_SYNC_TEST__ = true;
+    const testWindow = window as Window & {
+      __PIPLATE_SYNC_TEST__?: boolean;
+      __PIPLATE_BRING_TEST__?: (recipe: unknown, deeplinkUrl: string) => void;
+      __PIPLATE_LAST_BRING_IMPORT__?: { recipe: unknown; deeplinkUrl: string };
+    };
+    testWindow.__PIPLATE_SYNC_TEST__ = true;
+    testWindow.__PIPLATE_BRING_TEST__ = (recipe, deeplinkUrl) => {
+      testWindow.__PIPLATE_LAST_BRING_IMPORT__ = { recipe, deeplinkUrl };
+    };
   });
   await openApp(page);
 });
@@ -107,6 +119,22 @@ test('planner starts with today and keeps planned meals after reload', async ({ 
   await todaySection.getByRole('button', { name: /add recipe to|rezept zu.*hinzufügen/i }).click();
   await todaySection.getByRole('button', { name: /gnocci/i }).click();
   await expect(todaySection.getByRole('heading', { name: /gnocci/i })).toBeVisible();
+
+  await page.getByRole('button', { name: /open in bring|in bring öffnen/i }).click();
+  await expect(page.getByRole('button', { name: /open in bring|in bring öffnen/i })).toContainText(/bring opened|bring geöffnet/i);
+  const bringImport = await page.evaluate(() => (
+    window as Window & {
+      __PIPLATE_LAST_BRING_IMPORT__?: {
+        recipe: { author: string; name: string; items: Array<{ itemId: string; spec?: string }> };
+        deeplinkUrl: string;
+      };
+    }
+  ).__PIPLATE_LAST_BRING_IMPORT__);
+  expect(bringImport?.recipe.author).toBe('PiPlate');
+  expect(bringImport?.recipe.items.length).toBeGreaterThan(0);
+  expect(bringImport?.deeplinkUrl).toContain('https://api.getbring.com/rest/bringrecipes/deeplink?');
+  expect(bringImport?.deeplinkUrl).toContain('source=web');
+  await expectNoHorizontalOverflow(page);
 
   await page.reload();
   await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
