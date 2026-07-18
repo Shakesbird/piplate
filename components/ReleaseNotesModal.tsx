@@ -29,7 +29,7 @@ const ReleaseNotesModal: React.FC<ReleaseNotesModalProps> = ({ isOpen, onClose }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] bg-black/55 backdrop-blur-sm flex items-stretch sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="release-notes-title">
+    <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-stretch sm:items-center justify-center sm:p-4" style={{ zIndex: 1000 }} role="dialog" aria-modal="true" aria-labelledby="release-notes-title">
       <div className="relative flex max-h-[100dvh] w-full flex-col overflow-hidden bg-[#FFFDF8] shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-[2rem]">
         <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-5 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-8 sm:pt-8">
           <div className="flex items-start justify-between gap-4">
