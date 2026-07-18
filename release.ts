@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-18-update-reliability',
-  version: '1.4.1',
+  id: '2026-07-18-update-repair',
+  version: '1.4.2',
   en: {
     lines: [
-      'App patches now finish reliably instead of getting stuck while updating.',
+      'A safe repair option is now available if an app update gets stuck.',
     ],
   },
   de: {
     lines: [
-      'App-Patches werden jetzt zuverlässig abgeschlossen, statt beim Aktualisieren hängen zu bleiben.',
+      'Für festhängende App-Updates gibt es jetzt eine sichere Reparatur.',
     ],
   },
 } as const;

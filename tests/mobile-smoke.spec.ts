@@ -83,6 +83,18 @@ test('generated patch worker keeps activation alive until it finishes', async ()
   expect(serviceWorker).toContain('event.waitUntil(self.skipWaiting());');
 });
 
+test('update repair keeps local recipes and returns to PiPlate', async ({ page }) => {
+  await page.goto('/repair.html');
+  await expect(page.getByRole('heading', { name: 'PiPlate reparieren' })).toBeVisible();
+  await expect(page.getByText(/Rezepte, Wochenplan und Anmeldung bleiben/i)).toBeVisible();
+  await page.getByRole('button', { name: 'Update jetzt reparieren' }).click();
+  await expect(page.getByText('Fertig. PiPlate wird neu geöffnet.')).toBeVisible();
+  await page.waitForURL(/\?repaired=\d+$/);
+  await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /gnocci/i })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+});
+
 test('recipe editor contains no unfinished AI controls', async ({ page }) => {
   await expect(page.getByText(/10 (recipes|rezepte)/i)).toBeVisible();
   await page.getByRole('button', { name: /gnocci.*(open|öffnen)/i }).click();
