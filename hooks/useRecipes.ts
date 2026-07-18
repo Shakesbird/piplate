@@ -155,32 +155,6 @@ const MOCK_RECIPES: Recipe[] = [
   }
 ];
 
-const RECIPE_ARTWORK: Record<string, string> = {
-  '1': './recipe-images/gnocchi-chicken-pepper.png',
-  '2': './recipe-images/hotdog.png',
-  '3': './recipe-images/yoghurt-rice-skillet.png',
-  '4': './recipe-images/chickpea-ajvar.png',
-  '5': './recipe-images/mango-curry.png',
-  '6': './recipe-images/muesli.png',
-  '7': './recipe-images/pasta-bake.png',
-  '8': './recipe-images/pancakes.png',
-  '9': './recipe-images/udon-noodles.png',
-  '10': './recipe-images/wrap.png',
-};
-
-const RECIPE_TITLES: Record<string, string> = {
-  '1': 'Gnocci Hähnchen Paprika',
-  '2': 'Hotdog',
-  '3': 'Joghurt Reispfanne',
-  '4': 'Kichererbsen Ajvar',
-  '5': 'Mangocurry',
-  '6': 'Müsli',
-  '7': 'Nudelauflauf',
-  '8': 'Pfannenkuchen',
-  '9': 'Udon Nudeln',
-  '10': 'Wrap',
-};
-
 export const useRecipes = () => {
   const recipes = useLiveQuery(() => db.recipes.toArray()) || [];
   const weeklyPlanData = useLiveQuery(() => db.settings.get('weeklyPlan'));
@@ -190,49 +164,22 @@ export const useRecipes = () => {
 
   useEffect(() => {
     const initDb = async () => {
-      const recipeCount = await db.recipes.count();
-      if (recipeCount === 0) {
-        // React Strict Mode can run this initializer twice in development.
-        // bulkPut keeps the seed operation idempotent instead of raising a BulkError.
-        await db.recipes.bulkPut(MOCK_RECIPES);
-      }
-
-      // Apply the bundled watercolor artwork once to existing installations.
-      // Users can still replace these images afterwards without being overwritten.
-      const artworkMigration = await db.settings.get('recipeArtworkV1');
-      if (!artworkMigration) {
-        const existingRecipes = await db.recipes.bulkGet(Object.keys(RECIPE_ARTWORK));
-        const recipesWithArtwork = existingRecipes
-          .filter((recipe): recipe is Recipe => Boolean(recipe))
-          .map(recipe => ({ ...recipe, imageUri: RECIPE_ARTWORK[recipe.id] }));
-
-        if (recipesWithArtwork.length > 0) {
-          await db.recipes.bulkPut(recipesWithArtwork);
+      await db.transaction('rw', db.recipes, db.settings, async () => {
+        // Updates never seed, bulk-update, or otherwise rewrite an existing
+        // recipe collection. This marker also prevents deleted starter recipes
+        // from reappearing on a later launch.
+        const initialSeedComplete = await db.settings.get('initialSeedComplete');
+        if (!initialSeedComplete) {
+          const recipeCount = await db.recipes.count();
+          if (recipeCount === 0) await db.recipes.bulkAdd(MOCK_RECIPES);
+          await db.settings.put({ key: 'initialSeedComplete', value: true });
         }
-        await db.settings.put({ key: 'recipeArtworkV1', value: true });
-      }
 
-      // Rename the bundled recipes once so existing installations match the
-      // original filenames in the user's Rezeptbilder folder.
-      const titleMigration = await db.settings.get('recipeTitlesV1');
-      if (!titleMigration) {
-        const existingRecipes = await db.recipes.bulkGet(Object.keys(RECIPE_TITLES));
-        const recipesWithMatchingTitles = existingRecipes
-          .filter((recipe): recipe is Recipe => Boolean(recipe))
-          .map(recipe => ({ ...recipe, title: RECIPE_TITLES[recipe.id] }));
-
-        if (recipesWithMatchingTitles.length > 0) {
-          await db.recipes.bulkPut(recipesWithMatchingTitles);
-        }
-        await db.settings.put({ key: 'recipeTitlesV1', value: true });
-      }
-
-      const storedDayOrder = await db.settings.get('dayOrder');
-      if (!storedDayOrder) {
-        await db.settings.put({ key: 'dayOrder', value: DAYS_OF_WEEK });
-      }
+        const storedDayOrder = await db.settings.get('dayOrder');
+        if (!storedDayOrder) await db.settings.put({ key: 'dayOrder', value: DAYS_OF_WEEK });
+      });
     };
-    initDb();
+    void initDb().catch(error => console.error('Failed to initialize PiPlate data safely:', error));
   }, []);
 
   const saveRecipe = async (recipe: Recipe) => {

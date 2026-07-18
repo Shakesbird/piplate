@@ -11,6 +11,12 @@ android-test-results/
 .env
 .env.*
 !.env.example
+*.key
+*.pem
+*.p12
+credentials*.json
+secrets/
+.openai/
 
 # Codex workspace metadata
 .agents/

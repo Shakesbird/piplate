@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { DEFAULT_RECIPE_IMAGE, NutritionalValue, Recipe } from '../types';
 import { generateRecipeDetails, generateRecipeImage, isAiConfigured } from '../services/geminiService';
+import { handoffArtworkToChatGpt } from '../services/chatGptService';
 import { useLanguage } from '../i18n';
 
 interface DishModalProps {
@@ -21,6 +22,7 @@ interface DishModalProps {
   onClose: () => void;
   onSave: (recipe: Recipe) => void;
   onDelete: (id: string) => void;
+  chatGptHandoffEnabled: boolean;
 }
 
 const compressImage = (file: File): Promise<string> => new Promise((resolve, reject) => {
@@ -45,7 +47,7 @@ const compressImage = (file: File): Promise<string> => new Promise((resolve, rej
   reader.onerror = reject;
 });
 
-const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, onDelete }) => {
+const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, onDelete, chatGptHandoffEnabled }) => {
   const { language, t } = useLanguage();
   const [formData, setFormData] = useState<any>({});
   const [isGenerating, setIsGenerating] = useState(false);
@@ -149,7 +151,26 @@ const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, 
   const handleGenerateImage = async () => {
     if (!formData.title?.trim()) return;
     if (!isAiConfigured()) {
-      alert(t('apiKeyMissing'));
+      if (!chatGptHandoffEnabled) {
+        alert(t('chatGptConnectorDisabled'));
+        return;
+      }
+
+      setIsGeneratingImage(true);
+      try {
+        const result = await handoffArtworkToChatGpt(
+          formData.title,
+          formData.ingredients || [],
+          language,
+        );
+        if (result === 'shared') alert(t('chatGptShared'));
+        if (result === 'copied') alert(t('chatGptCopied'));
+      } catch (error) {
+        console.error('ChatGPT prompt handoff failed', error);
+        alert(t('chatGptHandoffError'));
+      } finally {
+        setIsGeneratingImage(false);
+      }
       return;
     }
 
@@ -243,7 +264,9 @@ const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, 
                       className="h-12 px-4 rounded-full bg-[#D95D39] text-white flex items-center gap-2 font-semibold text-sm shadow-lg active:scale-95 transition disabled:opacity-50"
                     >
                       <Sparkles size={18} className={isGeneratingImage ? 'animate-pulse' : ''} />
-                      {isGeneratingImage ? t('painting') : t('generatePicture')}
+                      {isGeneratingImage
+                        ? (isAiConfigured() ? t('painting') : t('openingChatGpt'))
+                        : (isAiConfigured() ? t('generatePicture') : t('createWithChatGpt'))}
                     </button>
                   </div>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
