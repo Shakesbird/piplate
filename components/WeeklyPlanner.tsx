@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ArrowRightLeft, CalendarDays, GripVertical, Plus, X } from 'lucide-react';
+import { ArrowRightLeft, CalendarDays, Check, Copy, GripVertical, Plus, ShoppingCart, X } from 'lucide-react';
 import { Recipe, WeeklyPlan } from '../types';
 import { useLanguage } from '../i18n';
+import { collectPlannerIngredients, sharePlannerIngredients } from '../services/bringService';
 
 interface WeeklyPlannerProps {
   recipes: Recipe[];
@@ -21,9 +22,29 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
   const [activeDayForAdd, setActiveDayForAdd] = useState<string | null>(null);
   const [moveRecipe, setMoveRecipe] = useState<{ day: string; recipeId: string } | null>(null);
   const [dragTargetDay, setDragTargetDay] = useState<string | null>(null);
+  const [bringStatus, setBringStatus] = useState<'idle' | 'sharing' | 'shared' | 'copied' | 'error'>('idle');
 
   const getRecipe = (id: string) => recipes.find(recipe => recipe.id === id);
   const plannedCount = Object.values(plan).reduce((total, ids) => total + ids.length, 0);
+  const plannerIngredients = collectPlannerIngredients(recipes, plan, dayOrder);
+
+  const handleSendPlannerToBring = async () => {
+    if (plannerIngredients.length === 0 || bringStatus === 'sharing') return;
+    setBringStatus('sharing');
+    try {
+      const result = await sharePlannerIngredients(t('plannerShoppingTitle'), plannerIngredients);
+      if (result === 'cancelled') {
+        setBringStatus('idle');
+        return;
+      }
+      setBringStatus(result);
+      window.setTimeout(() => setBringStatus('idle'), 5000);
+    } catch (error) {
+      console.error('Could not send planner ingredients to Bring', error);
+      setBringStatus('error');
+      window.setTimeout(() => setBringStatus('idle'), 5000);
+    }
+  };
 
   const addRecipeToDay = (day: string, recipeId: string) => {
     const current = plan[day] || [];
@@ -62,17 +83,35 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
 
   return (
     <div className="app-container pb-32 md:pb-16 pt-6 md:pt-10">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <p className="eyebrow">{t('plannerEyebrow')}</p>
           <h1 className="display-title mt-2">{t('weeklyPlanner')}</h1>
           <p className="mt-3 text-sm md:text-base text-[#756E64]">{t('plannerDescription')}</p>
         </div>
-        <div className="hidden sm:block rounded-2xl bg-[#E2E8D7] px-5 py-3 text-right">
-          <span className="block text-2xl font-display text-[#35402D]">{plannedCount}</span>
-          <span className="text-[10px] uppercase tracking-[0.18em] text-[#69745F]">{t('mealsPlanned')}</span>
+        <div className="flex items-center gap-2">
+          <div className="hidden md:block rounded-2xl bg-[#E2E8D7] px-5 py-3 text-right">
+            <span className="block text-2xl font-display text-[#35402D]">{plannedCount}</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] text-[#69745F]">{t('mealsPlanned')}</span>
+          </div>
+          <button
+            onClick={() => void handleSendPlannerToBring()}
+            disabled={plannerIngredients.length === 0 || bringStatus === 'sharing'}
+            className="min-h-12 rounded-full bg-[#526647] px-4 text-white flex items-center justify-center gap-2 text-sm font-semibold shadow-md active:scale-95 transition disabled:opacity-40"
+            aria-label={t('sendWeekToBring')}
+          >
+            {bringStatus === 'shared' ? <Check size={18} /> : bringStatus === 'copied' ? <Copy size={18} /> : <ShoppingCart size={18} />}
+            <span>{bringStatus === 'sharing' ? t('openingShareSheet') : bringStatus === 'shared' ? t('sharedWithBring') : bringStatus === 'copied' ? t('shoppingListCopied') : t('sendWeekToBring')}</span>
+          </button>
         </div>
       </div>
+
+      {bringStatus === 'idle' && plannerIngredients.length > 0 && (
+        <p className="mt-3 text-xs text-[#756E64] sm:text-right">{t('bringShareHint')}</p>
+      )}
+      {bringStatus === 'error' && (
+        <p className="mt-3 text-sm font-semibold text-[#9E4938]" role="alert">{t('bringShareError')}</p>
+      )}
 
       <div className="mt-7 md:mt-10 space-y-4 md:space-y-5">
         {dayOrder.map((day, dayIndex) => {
