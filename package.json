@@ -4,11 +4,8 @@
   "description": "Minimalist Recipe Manager for Raspberry Pi",
   "main": "electron.js",
   "scripts": {
-    "generate:pwa-icons": "node scripts/generate-pwa-icons.mjs",
-    "predev": "npm run generate:pwa-icons",
     "dev": "vite",
     "electron:dev": "wait-on tcp:5173 && .\\node_modules\\.bin\\electron.cmd .",
-    "prebuild": "npm run generate:pwa-icons",
     "build": "tsc && vite build && node scripts/build-pwa.mjs",
     "preview": "vite preview",
     "start": "concurrently -k \"npm run dev\" \"npm run electron:dev\"",
