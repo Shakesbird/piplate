@@ -11,6 +11,8 @@ import {
   Smartphone,
   Square,
   RefreshCw,
+  Share2,
+  SquarePlus,
   X,
 } from 'lucide-react';
 import { useRecipes } from './hooks/useRecipes';
@@ -52,7 +54,8 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMaximized, setIsMaximized] = useState(false);
   const [showReleaseNotes, setShowReleaseNotes] = useState(() => localStorage.getItem('piplate-seen-release') !== CURRENT_RELEASE.id);
-  const { applyUpdate, canInstall, install, isInstalled, isUpdating, updateAvailable } = usePwa();
+  const [showIosInstallGuide, setShowIosInstallGuide] = useState(false);
+  const { applyUpdate, canInstall, install, isInstalled, isIos, isIosSafari, isUpdating, updateAvailable } = usePwa();
   const householdSync = useHouseholdSync();
 
   const dismissReleaseNotes = () => {
@@ -214,7 +217,7 @@ const App: React.FC = () => {
 
       <SyncSettings sync={householdSync} />
 
-      <section className="mt-4 rounded-[2rem] border border-[#DED8CD] bg-white/80 p-5 sm:p-6 shadow-[0_18px_60px_rgba(47,43,37,0.06)]">
+      <section data-testid="install-settings" className="mt-4 rounded-[2rem] border border-[#DED8CD] bg-white/80 p-5 sm:p-6 shadow-[0_18px_60px_rgba(47,43,37,0.06)]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
             <span className="h-12 w-12 shrink-0 rounded-2xl bg-[#F8E9E4] text-[#D95D39] grid place-items-center">
@@ -223,12 +226,29 @@ const App: React.FC = () => {
             <div>
               <h2 className="font-display text-2xl">{t('installApp')}</h2>
               <p className="mt-1 text-sm text-[#756E64] max-w-lg">
-                {isInstalled ? t('installedDescription') : canInstall ? t('installDescription') : t('installUnavailableDescription')}
+                {isInstalled
+                  ? t('installedDescription')
+                  : isIosSafari
+                    ? t('iosInstallDescription')
+                    : isIos
+                      ? t('iosOpenInSafariDescription')
+                      : canInstall
+                        ? t('installDescription')
+                        : t('installUnavailableDescription')}
               </p>
             </div>
           </div>
           {isInstalled ? (
             <span className="self-start sm:self-auto rounded-full bg-[#E8F1E8] px-4 py-2.5 text-sm font-semibold text-[#4E6B4E]">{t('installed')}</span>
+          ) : isIosSafari ? (
+            <button
+              onClick={() => setShowIosInstallGuide(true)}
+              className="self-start sm:self-auto min-h-11 rounded-full bg-[#2D2A26] px-5 text-white flex items-center gap-2 font-semibold text-sm active:scale-95 transition"
+            >
+              <Share2 size={18} /> {t('showIosInstallGuide')}
+            </button>
+          ) : isIos ? (
+            <span className="self-start sm:self-auto rounded-full bg-[#EEE8DD] px-4 py-2.5 text-sm font-semibold text-[#756E64]">{t('openInSafari')}</span>
           ) : canInstall ? (
             <button
               onClick={() => void install()}
@@ -303,7 +323,7 @@ const App: React.FC = () => {
         </main>
       </div>
 
-      <nav className="mobile-nav md:hidden" style={{ pointerEvents: showReleaseNotes || isModalOpen ? 'none' : 'auto' }} aria-label={t('mobileNavigation')} aria-hidden={showReleaseNotes || isModalOpen}>
+      <nav className="mobile-nav md:hidden" style={{ pointerEvents: showReleaseNotes || showIosInstallGuide || isModalOpen ? 'none' : 'auto' }} aria-label={t('mobileNavigation')} aria-hidden={showReleaseNotes || showIosInstallGuide || isModalOpen}>
         <button onClick={() => setView('GALLERY')} className={`mobile-nav-item ${view === 'GALLERY' ? 'mobile-nav-active' : ''}`}><LayoutGrid size={21} /><span>{t('recipes')}</span></button>
         <button onClick={() => setView('PLANNER')} className={`mobile-nav-item ${view === 'PLANNER' ? 'mobile-nav-active' : ''}`}><CalendarDays size={21} /><span>{t('planner')}</span></button>
         <button onClick={handleAddNew} className="mobile-add" aria-label={t('addRecipe')}><Plus size={26} /></button>
@@ -319,6 +339,41 @@ const App: React.FC = () => {
       />
 
       <ReleaseNotesModal isOpen={showReleaseNotes} onClose={dismissReleaseNotes} />
+
+      {showIosInstallGuide && (
+        <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/55 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="ios-install-title">
+          <section
+            className="w-full overflow-y-auto rounded-t-[2rem] bg-[#FFFDF8] px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 shadow-2xl sm:max-w-lg sm:rounded-[2rem] sm:p-8"
+            style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top))' }}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="eyebrow">iPhone · Safari</p>
+                <h2 id="ios-install-title" className="mt-2 font-display text-3xl">{t('iosInstallTitle')}</h2>
+              </div>
+              <button onClick={() => setShowIosInstallGuide(false)} className="touch-button shrink-0 bg-[#EEE8DD] text-[#5F584F]" aria-label={t('closeIosInstallGuide')}><X size={19} /></button>
+            </div>
+
+            <ol className="mt-6 space-y-3">
+              <li className="flex gap-3 rounded-2xl bg-[#F7F3EB] p-4">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#D95D39] font-bold text-white">1</span>
+                <div><Share2 size={20} className="mb-1 text-[#D95D39]" /><p className="font-semibold">{t('iosInstallStepShare')}</p></div>
+              </li>
+              <li className="flex gap-3 rounded-2xl bg-[#F7F3EB] p-4">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#D95D39] font-bold text-white">2</span>
+                <div><SquarePlus size={20} className="mb-1 text-[#D95D39]" /><p className="font-semibold">{t('iosInstallStepHomeScreen')}</p></div>
+              </li>
+              <li className="flex gap-3 rounded-2xl bg-[#F7F3EB] p-4">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#D95D39] font-bold text-white">3</span>
+                <p className="self-center font-semibold">{t('iosInstallStepWebApp')}</p>
+              </li>
+            </ol>
+
+            <p className="mt-4 text-sm leading-relaxed text-[#756E64]">{t('iosInstallMissingAction')}</p>
+            <button onClick={() => setShowIosInstallGuide(false)} className="mt-6 min-h-12 w-full rounded-full bg-[#2D2A26] px-5 text-sm font-semibold text-white">{t('gotIt')}</button>
+          </section>
+        </div>
+      )}
 
       {updateAvailable && (
         <aside className="fixed z-[100] left-3 right-3 bottom-[5.75rem] md:left-auto md:right-5 md:bottom-5 md:w-[25rem] rounded-[1.5rem] border border-[#DED8CD] bg-[#FFFDF8] p-4 shadow-[0_22px_70px_rgba(45,42,38,0.24)]" role="status">

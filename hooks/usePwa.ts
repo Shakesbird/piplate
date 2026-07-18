@@ -5,9 +5,25 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
 
-const isStandaloneDisplay = () => window.matchMedia('(display-mode: standalone)').matches;
+type IosNavigator = Navigator & { standalone?: boolean };
+
+const isStandaloneDisplay = () => (
+  window.matchMedia('(display-mode: standalone)').matches
+  || (navigator as IosNavigator).standalone === true
+);
+
+const getIosBrowser = () => {
+  const userAgent = navigator.userAgent;
+  const isIos = /iPad|iPhone|iPod/i.test(userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSafari = isIos
+    && /Safari/i.test(userAgent)
+    && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(userAgent);
+  return { isIos, isIosSafari: isSafari };
+};
 
 export const usePwa = () => {
+  const { isIos, isIosSafari } = getIosBrowser();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(isStandaloneDisplay);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
@@ -144,6 +160,8 @@ export const usePwa = () => {
     canInstall: Boolean(installPrompt),
     install,
     isInstalled,
+    isIos,
+    isIosSafari,
     isUpdating,
     updateAvailable,
   };

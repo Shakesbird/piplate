@@ -121,6 +121,30 @@ test('gallery, planner, and settings remain usable on mobile', async ({ page }) 
   await expectNoHorizontalOverflow(page);
 });
 
+test('installation guidance matches the mobile browser', async ({ page }, testInfo) => {
+  await openSettings(page);
+  const installSettings = page.getByTestId('install-settings');
+
+  if (testInfo.project.name === 'iphone-15') {
+    await expect(installSettings.getByText(/Safari/i)).toBeVisible();
+    await installSettings.getByRole('button', { name: /iPhone instructions|iPhone-Anleitung/i }).click();
+
+    const guide = page.getByRole('dialog', { name: /Install PiPlate|PiPlate installieren/i });
+    await expect(guide).toBeVisible();
+    const steps = guide.locator('ol');
+    await expect(steps.getByText(/Share|Teilen/i)).toBeVisible();
+    await expect(steps.getByText(/Add to Home Screen|Zum Home-Bildschirm hinzufügen/i)).toBeVisible();
+    await expect(steps.getByText(/Open as Web App|Als Web-App öffnen/i)).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    await guide.getByRole('button', { name: /Got it|Verstanden/i }).click();
+    await expect(guide).toBeHidden();
+  } else {
+    await expect(installSettings.getByRole('button', { name: /iPhone instructions|iPhone-Anleitung/i })).toHaveCount(0);
+    await expect(installSettings.getByText(/Galaxy S24/i)).toBeVisible();
+  }
+});
+
 test('planner starts with today and keeps planned meals after reload', async ({ page }) => {
   const today = new Intl.DateTimeFormat('en-US', {
     weekday: 'long',

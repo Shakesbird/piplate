@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-18-update-repair',
-  version: '1.4.2',
+  id: '2026-07-18-safari-install',
+  version: '1.5.0',
   en: {
     lines: [
-      'A safe repair option is now available if an app update gets stuck.',
+      'PiPlate can now be installed from Safari with clear iPhone instructions.',
     ],
   },
   de: {
     lines: [
-      'Für festhängende App-Updates gibt es jetzt eine sichere Reparatur.',
+      'PiPlate lässt sich jetzt mit einer klaren iPhone-Anleitung aus Safari installieren.',
     ],
   },
 } as const;
