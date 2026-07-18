@@ -4,7 +4,6 @@ import {
   Flame,
   Plus,
   Save,
-  ShoppingCart,
   Sparkles,
   Trash2,
   Upload,
@@ -291,9 +290,6 @@ const DishModal: React.FC<DishModalProps> = ({ recipe, isOpen, onClose, onSave, 
             <div className="p-5 sm:p-8 lg:p-10 bg-[#F7F3EB] border-b lg:border-b-0 lg:border-r border-[#E8E1D6]">
               <div className="flex items-center justify-between gap-3 mb-6">
                 <div><p className="eyebrow">{t('whatYouNeed')}</p><h2 className="font-display text-3xl mt-1">{t('ingredients')}</h2></div>
-                {!isEditing && (
-                  <button onClick={() => alert(t('sentToBring', { title: formData.title }))} className="h-10 px-3 rounded-full border border-[#BFD0B4] text-[#526647] flex items-center gap-2 text-xs font-semibold active:bg-[#E3ECD9]" aria-label={t('addToBring')}><ShoppingCart size={15} /> <span className="hidden sm:inline">{t('addToBring')}</span></button>
-                )}
               </div>
 
               {isEditing ? (
