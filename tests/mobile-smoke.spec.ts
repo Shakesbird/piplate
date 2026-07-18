@@ -49,6 +49,19 @@ test.beforeEach(async ({ page }) => {
   await openApp(page);
 });
 
+test('changelog stays minimal and readable', async ({ page }) => {
+  await page.evaluate(() => localStorage.removeItem('piplate-seen-release'));
+  await page.reload();
+
+  const changelog = page.getByRole('dialog', { name: 'Changelog' });
+  await expect(changelog).toBeVisible();
+  await expect(changelog.getByRole('heading', { name: 'Changelog' })).toBeVisible();
+  await expect(changelog.locator('[data-changelog-line]')).toHaveCount(2);
+  await expect(changelog.getByText(/appears once|erscheint einmal|v1\.2\.4/i)).toHaveCount(0);
+  await expect(changelog.getByRole('button', { name: /got it|verstanden/i })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+});
+
 test('recipe editor contains no unfinished AI controls', async ({ page }) => {
   await expect(page.getByText(/10 (recipes|rezepte)/i)).toBeVisible();
   await page.getByRole('button', { name: /gnocci.*(open|öffnen)/i }).click();
