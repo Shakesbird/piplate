@@ -123,6 +123,21 @@ test('recipe previews use small, prioritised WebP images', async ({ page }) => {
   expect(previews.slice(4).every(image => image.loading === 'lazy' && image.fetchPriority === 'low' && image.decoding === 'async')).toBe(true);
 });
 
+test('recipe statistics sit at the panel bottom and show calories per portion', async ({ page }) => {
+  const recipeCard = page.locator('article').filter({ has: page.getByRole('heading', { name: /gnocci/i }) });
+  const statistics = recipeCard.locator('.recipe-card-stats');
+  await expect(statistics).toContainText(/145 kcal\/portion/i);
+
+  const bottomGap = await recipeCard.evaluate(card => {
+    const cardBox = card.getBoundingClientRect();
+    const statisticsBox = card.querySelector('.recipe-card-stats')!.getBoundingClientRect();
+    return cardBox.bottom - statisticsBox.bottom;
+  });
+  expect(bottomGap).toBeGreaterThanOrEqual(12);
+  expect(bottomGap).toBeLessThanOrEqual(22);
+  await expectNoHorizontalOverflow(page);
+});
+
 test('recipes can be sorted by name and the choice persists', async ({ page }) => {
   const sortSelect = page.getByLabel(/sort recipes|rezepte sortieren/i);
   await expect(sortSelect).toBeVisible();
@@ -233,16 +248,26 @@ test('gallery, planner, and settings remain usable on mobile', async ({ page }) 
     const plannerBox = await plannerTab.boundingBox();
     const addBox = await addButton.boundingBox();
     if (!navigationBox || !recipeBox || !recipeIconBox || !plannerBox || !addBox) throw new Error('Mobile navigation geometry is unavailable');
+    const navigationStyle = await navigation.evaluate(element => {
+      const style = getComputedStyle(element);
+      return {
+        border: Number.parseFloat(style.borderLeftWidth),
+        padding: Number.parseFloat(style.paddingLeft),
+      };
+    });
     const center = (box: { x: number; width: number }) => box.x + box.width / 2;
+    const expectedColumnGap = (navigationBox.width - 2 * (navigationStyle.border + navigationStyle.padding)) / 3;
     return {
       addToNavigation: Math.abs(center(addBox) - center(navigationBox)),
       tabSymmetry: Math.abs((center(addBox) - center(recipeBox)) - (center(plannerBox) - center(addBox))),
       iconToHighlight: Math.abs(center(recipeIconBox) - center(recipeBox)),
+      equalColumnGap: Math.abs((center(addBox) - center(recipeBox)) - expectedColumnGap),
     };
   })();
   expect(navigationAlignment.addToNavigation).toBeLessThan(1.5);
   expect(navigationAlignment.tabSymmetry).toBeLessThan(1.5);
   expect(navigationAlignment.iconToHighlight).toBeLessThan(1.5);
+  expect(navigationAlignment.equalColumnGap).toBeLessThan(1.5);
   await expectNoHorizontalOverflow(page);
 
   await openPlanner(page);
@@ -348,6 +373,57 @@ test('planner starts with today and keeps planned meals after reload', async ({ 
   const reloadedTodaySection = page.locator('[data-planner-day]').first();
   await expect(reloadedTodaySection).toHaveAttribute('data-planner-day', today);
   await expect(reloadedTodaySection.getByRole('heading', { name: /gnocci/i })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+});
+
+test('planner shows complete recipe names without meal quantities', async ({ page }) => {
+  const longTitle = 'A colourful vegetable casserole for everyone around the family table';
+  await page.evaluate(async title => {
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('PiPlateDB');
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction('recipes', 'readwrite');
+        transaction.objectStore('recipes').put({
+          id: 'long-planner-title',
+          title,
+          ingredients: ['Vegetables'],
+          instructions: ['Bake'],
+          portions: 4,
+          nutrition: { calories: 1200, protein: 40, carbs: 140, fat: 48 },
+          imageUri: './recipe-images/pasta-bake.webp',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+        transaction.oncomplete = () => { database.close(); resolve(); };
+        transaction.onerror = () => reject(transaction.error);
+      };
+    });
+  }, longTitle);
+  await page.reload();
+  await openPlanner(page);
+
+  const todaySection = page.locator('[data-planner-day]').first();
+  await todaySection.getByRole('button', { name: /add recipe to|rezept zu.*hinzuf/i }).click();
+  await todaySection.getByRole('button', { name: longTitle }).click();
+
+  const plannerTitle = todaySection.getByRole('heading', { name: longTitle });
+  await expect(plannerTitle).toBeVisible();
+  const titleLayout = await plannerTitle.evaluate(element => {
+    const titleBox = element.getBoundingClientRect();
+    const cardBox = element.parentElement!.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      lineClamp: style.getPropertyValue('-webkit-line-clamp'),
+      fullyRendered: element.scrollHeight <= element.clientHeight + 1,
+      insideCard: titleBox.top >= cardBox.top && titleBox.bottom <= cardBox.bottom,
+    };
+  });
+  expect(titleLayout.lineClamp).toBe('none');
+  expect(titleLayout.fullyRendered).toBe(true);
+  expect(titleLayout.insideCard).toBe(true);
+  await expect(page.getByText(/meals planned|mahlzeiten geplant|1 meal|1 mahlzeit/i)).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 });
 

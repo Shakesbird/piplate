@@ -125,10 +125,6 @@
         gap: 0.5rem;
       }
 
-      .planner-count {
-        display: none;
-      }
-
       .bring-compact {
         min-height: 2.75rem;
         display: inline-flex;
@@ -148,12 +144,6 @@
 
       .bring-compact:disabled {
         opacity: 0.4;
-      }
-
-      @media (min-width: 768px) {
-        .planner-count {
-          display: block;
-        }
       }
 
       .stat-card {
@@ -203,7 +193,7 @@
         bottom: max(0.75rem, env(safe-area-inset-bottom));
         height: 4.25rem;
         display: grid;
-        grid-template-columns: 1fr 4.2rem 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         align-items: center;
         padding: 0.35rem;
         border: 1px solid rgba(255,255,255,0.75);
@@ -215,8 +205,9 @@
 
       .mobile-nav-item {
         height: 3.4rem;
-        width: 100%;
+        width: calc(100% - 0.35rem);
         min-width: 0;
+        justify-self: center;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -229,6 +220,17 @@
         color: #958D80;
         font-size: 0.58rem;
         font-weight: 700;
+        line-height: 1;
+      }
+
+      .mobile-nav-item svg,
+      .mobile-nav-item span {
+        display: block;
+      }
+
+      .mobile-nav-item span {
+        width: 100%;
+        text-align: center;
       }
 
       .mobile-nav-active {
@@ -253,14 +255,39 @@
         aspect-ratio: 4 / 3;
       }
 
+      .recipe-card {
+        display: flex;
+        height: 100%;
+        flex-direction: column;
+      }
+
+      .recipe-card-copy {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        padding: 0.875rem;
+      }
+
+      .recipe-card-stats {
+        margin-top: auto;
+        padding-top: 0.75rem;
+      }
+
       .recipe-card-title {
+        overflow-wrap: anywhere;
+      }
+
+      .planner-recipe-title {
         overflow-wrap: anywhere;
       }
 
       .mobile-add {
         width: 3.65rem;
         height: 3.65rem;
-        margin-inline: auto;
+        justify-self: center;
+        margin-inline: 0;
+        padding: 0;
+        border: 0;
         display: grid;
         place-items: center;
         border-radius: 1.2rem;
@@ -272,6 +299,12 @@
 
       .mobile-add:active {
         transform: scale(0.9);
+      }
+
+      @media (min-width: 768px) {
+        .recipe-card-copy {
+          padding: 1.25rem;
+        }
       }
 
       .safe-top {

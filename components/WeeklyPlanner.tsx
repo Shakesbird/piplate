@@ -29,7 +29,6 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
   const [bringLinkRevision, setBringLinkRevision] = useState(0);
 
   const getRecipe = (id: string) => recipes.find(recipe => recipe.id === id);
-  const plannedCount = Object.values(plan).reduce((total, ids) => total + ids.length, 0);
   const plannerIngredients = useMemo(
     () => collectPlannerIngredients(recipes, plan, dayOrder),
     [recipes, plan, dayOrder],
@@ -126,10 +125,6 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
       <div data-testid="planner-header" className="planner-header">
         <h1 className="display-title min-w-0">{t('weeklyPlanner')}</h1>
         <div className="planner-actions">
-          <div className="planner-count rounded-2xl bg-[#E2E8D7] px-5 py-3 text-right">
-            <span className="block text-2xl font-display text-[#35402D]">{plannedCount}</span>
-            <span className="text-[10px] uppercase tracking-[0.18em] text-[#69745F]">{t('mealsPlanned')}</span>
-          </div>
           {bringLink ? (
             <a
               href={bringLink}
@@ -190,7 +185,6 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
                     <h2 className="font-display text-xl md:text-2xl text-[#2D2A26]">{dayName(day)}</h2>
                     {dayIndex === 0 && <span className="rounded-full bg-[#E2E8D7] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#526647]">{t('today')}</span>}
                   </div>
-                  <p className="text-xs text-[#958D80]">{dayRecipes.length === 0 ? t('noMeals') : dayRecipes.length === 1 ? t('oneMeal') : t('manyMeals', { count: dayRecipes.length })}</p>
                 </div>
                 <button
                   onClick={() => { setMoveRecipe(null); setActiveDayForAdd(day); }}
@@ -213,16 +207,18 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
                         draggable
                         onDragStart={event => handleDragStart(event, day, recipe.id)}
                         onDragEnd={() => setDragTargetDay(null)}
-                        className="relative min-w-0 w-[150px] max-w-full sm:w-[180px] md:w-[210px] shrink-0 aspect-[4/3] rounded-[1.2rem] overflow-hidden bg-[#DDD5C8] snap-start shadow-sm group"
+                        className="relative flex min-w-0 w-[150px] max-w-full sm:w-[180px] md:w-[210px] shrink-0 flex-col rounded-[1.2rem] overflow-hidden bg-white snap-start shadow-sm group"
                       >
-                        <img src={getRecipeImageSource(recipe.imageUri)} onError={event => { event.currentTarget.src = DEFAULT_RECIPE_IMAGE; }} alt="" className="block h-full w-full max-w-full object-cover" style={{ width: '100%', maxWidth: '100%' }} loading="lazy" decoding="async" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10" />
-                        <div className="absolute top-2 left-2 hidden md:flex h-8 w-8 rounded-full bg-white/85 items-center justify-center cursor-grab"><GripVertical size={15} /></div>
-                        <div className="absolute top-2 right-2 flex gap-1">
-                          <button onClick={() => setMoveRecipe({ day, recipeId: recipe.id })} className="h-9 w-9 rounded-full bg-white/90 grid place-items-center text-[#2D2A26] active:scale-90" aria-label={t('moveRecipe', { title: recipe.title })}><ArrowRightLeft size={15} /></button>
-                          <button onClick={() => removeRecipeFromDay(day, recipe.id)} className="h-9 w-9 rounded-full bg-white/90 grid place-items-center text-[#8B4333] active:scale-90" aria-label={t('removeRecipeFromDay', { title: recipe.title, day: dayName(day) })}><X size={16} /></button>
+                        <div className="relative aspect-[4/3] overflow-hidden bg-[#DDD5C8]">
+                          <img src={getRecipeImageSource(recipe.imageUri)} onError={event => { event.currentTarget.src = DEFAULT_RECIPE_IMAGE; }} alt="" className="block h-full w-full max-w-full object-cover" style={{ width: '100%', maxWidth: '100%' }} loading="lazy" decoding="async" />
+                          <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-transparent" />
+                          <div className="absolute top-2 left-2 hidden md:flex h-8 w-8 rounded-full bg-white/85 items-center justify-center cursor-grab"><GripVertical size={15} /></div>
+                          <div className="absolute top-2 right-2 flex gap-1">
+                            <button onClick={() => setMoveRecipe({ day, recipeId: recipe.id })} className="h-9 w-9 rounded-full bg-white/90 grid place-items-center text-[#2D2A26] active:scale-90" aria-label={t('moveRecipe', { title: recipe.title })}><ArrowRightLeft size={15} /></button>
+                            <button onClick={() => removeRecipeFromDay(day, recipe.id)} className="h-9 w-9 rounded-full bg-white/90 grid place-items-center text-[#8B4333] active:scale-90" aria-label={t('removeRecipeFromDay', { title: recipe.title, day: dayName(day) })}><X size={16} /></button>
+                          </div>
                         </div>
-                        <h3 className="absolute inset-x-0 bottom-0 p-3 text-white font-semibold text-sm leading-tight line-clamp-2">{recipe.title}</h3>
+                        <h3 className="planner-recipe-title p-3 text-[#2D2A26] font-semibold text-sm leading-tight">{recipe.title}</h3>
                       </div>
                     ))}
                   </div>
@@ -242,7 +238,7 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
                     {recipes.map(recipe => (
                       <button key={recipe.id} onClick={() => addRecipeToDay(day, recipe.id)} className="min-h-[58px] flex items-center gap-3 rounded-2xl p-2 text-left bg-[#F5F0E7] active:bg-[#E8DED1]">
                         <img src={getRecipeImageSource(recipe.imageUri)} onError={event => { event.currentTarget.src = DEFAULT_RECIPE_IMAGE; }} alt="" className="h-11 w-11 rounded-xl object-cover" loading="lazy" decoding="async" />
-                        <span className="font-semibold text-sm line-clamp-2">{recipe.title}</span>
+                        <span className="planner-recipe-title font-semibold text-sm">{recipe.title}</span>
                       </button>
                     ))}
                   </div>

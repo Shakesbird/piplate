@@ -15,6 +15,7 @@ const DishCard: React.FC<DishCardProps> = ({ recipe, onClick, onAddToDay, priori
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [savedDay, setSavedDay] = useState<string | null>(null);
   const dayOrder = getTodayFirstDayOrder();
+  const caloriesPerPortion = Math.round(recipe.nutrition.calories / Math.max(1, recipe.portions));
 
   const handleAddToDay = async (event: React.MouseEvent<HTMLButtonElement>, day: string) => {
     event.stopPropagation();
@@ -42,7 +43,7 @@ const DishCard: React.FC<DishCardProps> = ({ recipe, onClick, onAddToDay, priori
       tabIndex={0}
       onClick={onClick}
       onKeyDown={handleKeyDown}
-      className="group relative min-w-0 w-full cursor-pointer rounded-[1.35rem] md:rounded-[1.75rem] overflow-hidden bg-white shadow-[0_12px_32px_rgba(47,43,37,0.10)] transition duration-300 md:hover:-translate-y-1 md:hover:shadow-[0_20px_45px_rgba(47,43,37,0.16)] focus:outline-none focus:ring-4 focus:ring-[#D95D39]/25"
+      className="recipe-card group relative min-w-0 w-full cursor-pointer rounded-[1.35rem] md:rounded-[1.75rem] overflow-hidden bg-white shadow-[0_12px_32px_rgba(47,43,37,0.10)] transition duration-300 md:hover:-translate-y-1 md:hover:shadow-[0_20px_45px_rgba(47,43,37,0.16)] focus:outline-none focus:ring-4 focus:ring-[#D95D39]/25"
       aria-label={t('openRecipe', { title: recipe.title })}
     >
       <div className="recipe-card-image relative overflow-hidden bg-[#DED8CD]">
@@ -67,12 +68,12 @@ const DishCard: React.FC<DishCardProps> = ({ recipe, onClick, onAddToDay, priori
         </button>
       </div>
 
-      <div className="p-3.5 md:p-5 text-[#2D2A26]">
+      <div className="recipe-card-copy text-[#2D2A26]">
         <h3 className="recipe-card-title font-display text-lg leading-[1.15] sm:text-xl md:text-2xl">{recipe.title}</h3>
-        <div className="mt-2.5 flex items-center gap-3 text-[11px] sm:text-xs text-[#756E64]">
+        <div className="recipe-card-stats flex items-center gap-3 text-[11px] sm:text-xs text-[#756E64]">
           <span className="flex items-center gap-1"><Users size={13} /> {recipe.portions}</span>
           <span className="h-1 w-1 rounded-full bg-[#B7AFA3]" />
-          <span className="flex items-center gap-1"><Flame size={13} /> {recipe.nutrition.calories} kcal</span>
+          <span className="flex min-w-0 items-center gap-1"><Flame size={13} className="shrink-0" /> {t('caloriesPerPortion', { count: caloriesPerPortion })}</span>
         </div>
       </div>
 
