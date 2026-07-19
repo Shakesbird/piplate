@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-19-cleaner-navigation',
-  version: '1.5.7',
+  id: '2026-07-19-stable-patches',
+  version: '1.5.8',
   en: {
     lines: [
-      'The cleaner header now shows the PiPlate logo and keeps Settings within easy reach.',
+      'App patches now recover more reliably from slow or interrupted updates.',
     ],
   },
   de: {
     lines: [
-      'Die aufgeräumte Kopfzeile zeigt jetzt das PiPlate-Logo und hält die Einstellungen griffbereit.',
+      'App-Patches erholen sich jetzt zuverlässiger von langsamen oder unterbrochenen Updates.',
     ],
   },
 } as const;

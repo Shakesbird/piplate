@@ -40,12 +40,27 @@ const PRECACHE = \`piplate-precache-\${RELEASE}\`;
 const RUNTIME = \`piplate-runtime-\${RELEASE}\`;
 const PRECACHE_URLS = ${JSON.stringify(precacheUrls, null, 2)};
 const OPTIONAL_EXTERNAL_URLS = ${JSON.stringify(optionalExternalUrls, null, 2)};
+let SHOULD_NAVIGATE_CLIENTS = false;
+
+const fetchForPrecache = async url => {
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(new Request(url, { cache: 'reload' }));
+      if (!response.ok) throw new Error(\`Could not precache \${url}: \${response.status}\`);
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) await new Promise(resolve => setTimeout(resolve, attempt * 300));
+    }
+  }
+  throw lastError;
+};
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(PRECACHE).then(async cache => {
     await Promise.all(PRECACHE_URLS.map(async url => {
-      const response = await fetch(new Request(url, { cache: 'reload' }));
-      if (!response.ok) throw new Error(\`Could not precache \${url}: \${response.status}\`);
+      const response = await fetchForPrecache(url);
       await cache.put(url, response);
     }));
     await Promise.allSettled(OPTIONAL_EXTERNAL_URLS.map(async url => {
@@ -57,15 +72,24 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(key => key.startsWith('piplate-') && ![PRECACHE, RUNTIME].includes(key)).map(key => caches.delete(key))))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.allSettled(keys
+      .filter(key => key.startsWith('piplate-') && ![PRECACHE, RUNTIME].includes(key))
+      .map(key => caches.delete(key)));
+    await self.clients.claim();
+
+    if (!SHOULD_NAVIGATE_CLIENTS) return;
+    const appUrl = new URL('./', self.registration.scope);
+    appUrl.searchParams.set('updated', RELEASE);
+    const windowClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    await Promise.allSettled(windowClients.map(client => client.navigate(appUrl.toString())));
+  })());
 });
 
 self.addEventListener('message', event => {
   if (event.data?.type === 'SKIP_WAITING') {
+    SHOULD_NAVIGATE_CLIENTS = true;
     event.waitUntil(self.skipWaiting());
   }
 });

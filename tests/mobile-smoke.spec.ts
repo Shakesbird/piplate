@@ -81,7 +81,11 @@ test('changelog stays minimal and readable', async ({ page }) => {
 test('generated patch worker keeps activation alive until it finishes', async () => {
   const serviceWorker = await readFile('dist/sw.js', 'utf8');
   expect(serviceWorker).toContain('event.waitUntil(self.skipWaiting());');
-  expect(serviceWorker).toContain("new Request(url, { cache: 'reload' })");
+  expect(serviceWorker).toContain('const fetchForPrecache = async url =>');
+  expect(serviceWorker).toContain('attempt <= 3');
+  expect(serviceWorker).toContain('SHOULD_NAVIGATE_CLIENTS = true');
+  expect(serviceWorker).toContain("client.navigate(appUrl.toString())");
+  expect(serviceWorker).toContain("self.clients.matchAll({ type: 'window', includeUncontrolled: true })");
   expect(serviceWorker).not.toContain('cache.addAll(PRECACHE_URLS)');
   expect(serviceWorker).not.toContain('recipe-images/');
 });
@@ -90,7 +94,12 @@ test('stuck updates fall back to the safe cache repair', async () => {
   const pwaHook = await readFile('hooks/usePwa.ts', 'utf8');
   expect(pwaHook).toContain('await registration.unregister();');
   expect(pwaHook).toContain("cacheName.startsWith('piplate-')");
-  expect(pwaHook).toContain('window.location.replace(appUrl.toString());');
+  expect(pwaHook).toContain("new URL(import.meta.env.BASE_URL, window.location.href)");
+  expect(pwaHook).toContain('await waitForWaitingWorker(activeRegistration)');
+  expect(pwaHook).toContain('await reloadWithoutStuckAppCache(activeRegistration)');
+  expect(pwaHook).toContain('Promise.race([');
+  expect(pwaHook).toContain("window.location.replace(getFreshAppUrl('repaired'));");
+  expect(pwaHook).toContain("window.location.replace(getFreshAppUrl('updated'));");
 });
 
 test('recipe previews use small, prioritised WebP images', async ({ page }) => {

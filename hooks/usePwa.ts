@@ -22,22 +22,60 @@ const getIosBrowser = () => {
   return { isIos, isIosSafari: isSafari };
 };
 
+const getFreshAppUrl = (reason: 'repaired' | 'updated') => {
+  const appUrl = new URL(import.meta.env.BASE_URL, window.location.href);
+  appUrl.searchParams.set(reason, String(Date.now()));
+  return appUrl.toString();
+};
+
 const reloadWithoutStuckAppCache = async (registration: ServiceWorkerRegistration) => {
   try {
-    await registration.unregister();
-    if ('caches' in window) {
-      const cacheNames = await caches.keys();
-      await Promise.all(cacheNames
-        .filter(cacheName => cacheName.startsWith('piplate-'))
-        .map(cacheName => caches.delete(cacheName)));
-    }
+    const cleanup = async () => {
+      await registration.unregister();
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.allSettled(cacheNames
+          .filter(cacheName => cacheName.startsWith('piplate-'))
+          .map(cacheName => caches.delete(cacheName)));
+      }
+    };
+    await Promise.race([
+      cleanup(),
+      new Promise<void>(resolve => window.setTimeout(resolve, 4_000)),
+    ]);
   } catch (error) {
     console.error('PiPlate could not clear the stuck update cache:', error);
   } finally {
-    const appUrl = new URL(import.meta.env.BASE_URL, window.location.origin);
-    appUrl.searchParams.set('repaired', String(Date.now()));
-    window.location.replace(appUrl.toString());
+    window.location.replace(getFreshAppUrl('repaired'));
   }
+};
+
+const waitForWaitingWorker = async (registration: ServiceWorkerRegistration) => {
+  if (registration.waiting) return registration.waiting;
+
+  try {
+    await registration.update();
+  } catch (error) {
+    console.error('PiPlate could not recheck the pending patch:', error);
+  }
+  if (registration.waiting) return registration.waiting;
+
+  const installingWorker = registration.installing;
+  if (!installingWorker) return null;
+  if (installingWorker.state === 'installed') return registration.waiting ?? installingWorker;
+
+  return new Promise<ServiceWorker | null>(resolve => {
+    const timeout = window.setTimeout(() => resolve(null), 12_000);
+    installingWorker.addEventListener('statechange', () => {
+      if (installingWorker.state === 'installed') {
+        window.clearTimeout(timeout);
+        resolve(registration.waiting ?? installingWorker);
+      } else if (installingWorker.state === 'redundant') {
+        window.clearTimeout(timeout);
+        resolve(null);
+      }
+    });
+  });
 };
 
 export const usePwa = () => {
@@ -90,7 +128,7 @@ export const usePwa = () => {
         window.clearTimeout(fallbackReloadTimer.current);
         fallbackReloadTimer.current = undefined;
       }
-      window.location.reload();
+      window.location.replace(getFreshAppUrl('updated'));
     };
 
     navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
@@ -142,19 +180,10 @@ export const usePwa = () => {
       return;
     }
 
-    if (!activeRegistration.waiting) {
-      try {
-        await activeRegistration.update();
-      } catch (error) {
-        console.error('PiPlate could not recheck the pending patch:', error);
-      }
-    }
-
-    const waitingWorker = activeRegistration.waiting;
+    const waitingWorker = await waitForWaitingWorker(activeRegistration);
     if (!waitingWorker) {
       reloadForNewWorker.current = false;
-      setUpdateAvailable(false);
-      setIsUpdating(false);
+      await reloadWithoutStuckAppCache(activeRegistration);
       return;
     }
 
@@ -162,7 +191,7 @@ export const usePwa = () => {
       if (waitingWorker.state !== 'activated' || !reloadForNewWorker.current) return;
       reloadForNewWorker.current = false;
       if (fallbackReloadTimer.current !== undefined) window.clearTimeout(fallbackReloadTimer.current);
-      window.location.reload();
+      window.location.replace(getFreshAppUrl('updated'));
     };
 
     waitingWorker.addEventListener('statechange', reloadWhenActivated);
@@ -172,7 +201,7 @@ export const usePwa = () => {
       if (!reloadForNewWorker.current) return;
       reloadForNewWorker.current = false;
       void reloadWithoutStuckAppCache(activeRegistration);
-    }, 8_000);
+    }, 15_000);
   }, [registration]);
 
   return {
