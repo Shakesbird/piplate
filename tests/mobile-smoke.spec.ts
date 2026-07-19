@@ -44,9 +44,9 @@ const openPlanner = async (page: Page) => {
 };
 
 const openSettings = async (page: Page) => {
-  const navigation = mobileNavigation(page);
-  await expect(navigation).toBeVisible();
-  await navigation.getByRole('button', { name: /settings|einstellungen/i }).click();
+  const header = page.getByTestId('app-header');
+  await expect(header).toBeVisible();
+  await header.getByRole('button', { name: /settings|einstellungen/i }).click();
   await expect(page.getByRole('heading', { name: /settings|einstellungen/i })).toBeVisible();
 };
 
@@ -141,9 +141,16 @@ test('recipe editor contains no unfinished AI controls', async ({ page }) => {
 });
 
 test('gallery, planner, and settings remain usable on mobile', async ({ page }) => {
+  const header = page.getByTestId('app-header');
+  await expect(header.locator('img')).toHaveAttribute('src', './icons/piplate-192.png');
+  await expect(header.getByRole('button', { name: /add recipe|rezept hinzufügen/i })).toHaveCount(0);
+  await expect(page.locator('.filter-chip')).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 
   await openPlanner(page);
+  await expect(page.getByText(/Tap \+ to plan|Tippe auf \+/i)).toHaveCount(0);
+  await expect(page.getByText(/Bring handles your login|Die Anmeldung übernimmt Bring/i)).toHaveCount(0);
+  await expect(header.getByRole('button', { name: /settings|einstellungen/i })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   await openSettings(page);

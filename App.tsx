@@ -116,7 +116,7 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-6 md:mt-8 flex flex-col md:flex-row md:items-center gap-3">
+        <div className="mt-6 md:mt-8">
           <label className="relative flex-1 max-w-xl">
             <span className="sr-only">{t('searchRecipes')}</span>
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8E887E]" size={20} />
@@ -137,11 +137,6 @@ const App: React.FC = () => {
               </button>
             )}
           </label>
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-            <span className="filter-chip bg-[#2D2A26] text-white">{t('allDishes')}</span>
-            <span className="filter-chip">{t('saved', { count: recipes.length })}</span>
-            <span className="filter-chip">{t('readyToPlan')}</span>
-          </div>
         </div>
       </section>
 
@@ -294,10 +289,10 @@ const App: React.FC = () => {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden hover-scrollbar overscroll-contain">
-        <header className="sticky top-0 z-40 border-b border-[#DED8CD]/80 bg-[#F7F3EB]/90 backdrop-blur-xl safe-top">
+        <header data-testid="app-header" className="sticky top-0 z-40 border-b border-[#DED8CD]/80 bg-[#F7F3EB]/90 backdrop-blur-xl safe-top">
           <div className="app-container h-[70px] flex items-center justify-between">
             <button onClick={() => setView('GALLERY')} className="flex items-center gap-3" aria-label={t('openGallery')}>
-              <span className="h-10 w-10 rounded-[14px] bg-[#D95D39] text-white grid place-items-center font-display text-xl shadow-[0_8px_18px_rgba(217,93,57,0.22)]">P</span>
+              <img src="./icons/piplate-192.png" alt="" className="h-10 w-10 rounded-[14px] shadow-[0_8px_18px_rgba(217,93,57,0.22)]" />
               <span className="font-display text-[1.35rem] tracking-tight">PiPlate</span>
             </button>
 
@@ -306,12 +301,7 @@ const App: React.FC = () => {
               <button onClick={() => setView('PLANNER')} className={`desktop-nav ${view === 'PLANNER' ? 'desktop-nav-active' : ''}`}>{t('planner')}</button>
             </nav>
 
-            <div className="flex items-center gap-2">
-              <button onClick={() => setView('SETTINGS')} className={`hidden sm:grid touch-button ${view === 'SETTINGS' ? 'bg-[#2D2A26] text-white' : 'bg-white text-[#5F584F] border border-[#DED8CD]'}`} aria-label={t('settings')}><Settings size={20} /></button>
-              <button onClick={handleAddNew} className="h-11 px-4 rounded-full bg-[#2D2A26] text-white flex items-center gap-2 font-semibold text-sm shadow-[0_9px_24px_rgba(45,42,38,0.18)] active:scale-95 transition" aria-label={t('addRecipe')}>
-                <Plus size={20} /> <span className="hidden sm:inline">{t('newRecipe')}</span>
-              </button>
-            </div>
+            <button onClick={() => setView('SETTINGS')} className={`grid touch-button ${view === 'SETTINGS' ? 'bg-[#2D2A26] text-white' : 'bg-white text-[#5F584F] border border-[#DED8CD]'}`} aria-label={t('settings')}><Settings size={20} /></button>
           </div>
         </header>
 

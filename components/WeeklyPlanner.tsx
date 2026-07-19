@@ -127,7 +127,6 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
         <div>
           <p className="eyebrow">{t('plannerEyebrow')}</p>
           <h1 className="display-title mt-2">{t('weeklyPlanner')}</h1>
-          <p className="mt-3 text-sm md:text-base text-[#756E64]">{t('plannerDescription')}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="hidden md:block rounded-2xl bg-[#E2E8D7] px-5 py-3 text-right">
@@ -159,9 +158,6 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
         </div>
       </div>
 
-      {bringStatus === 'idle' && plannerIngredients.length > 0 && (
-        <p className="mt-3 text-xs text-[#756E64] sm:text-right">{t('bringShareHint')}</p>
-      )}
       {bringStatus === 'error' && (
         <p className="mt-3 text-sm font-semibold text-[#9E4938]" role="alert">{t('bringShareError')}</p>
       )}

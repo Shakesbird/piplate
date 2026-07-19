@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-19-bring-return-link',
-  version: '1.5.6',
+  id: '2026-07-19-cleaner-navigation',
+  version: '1.5.7',
   en: {
     lines: [
-      'Returning from Bring now opens PiPlate instead of a missing page.',
+      'The cleaner header now shows the PiPlate logo and keeps Settings within easy reach.',
     ],
   },
   de: {
     lines: [
-      'Die Rückkehr aus Bring öffnet jetzt PiPlate statt einer fehlenden Seite.',
+      'Die aufgeräumte Kopfzeile zeigt jetzt das PiPlate-Logo und hält die Einstellungen griffbereit.',
     ],
   },
 } as const;
