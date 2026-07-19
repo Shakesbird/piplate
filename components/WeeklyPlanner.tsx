@@ -123,13 +123,10 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
 
   return (
     <div className="app-container pb-32 md:pb-16 pt-6 md:pt-10">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow">{t('plannerEyebrow')}</p>
-          <h1 className="display-title mt-2">{t('weeklyPlanner')}</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="hidden md:block rounded-2xl bg-[#E2E8D7] px-5 py-3 text-right">
+      <div data-testid="planner-header" className="planner-header">
+        <h1 className="display-title min-w-0">{t('weeklyPlanner')}</h1>
+        <div className="planner-actions">
+          <div className="planner-count rounded-2xl bg-[#E2E8D7] px-5 py-3 text-right">
             <span className="block text-2xl font-display text-[#35402D]">{plannedCount}</span>
             <span className="text-[10px] uppercase tracking-[0.18em] text-[#69745F]">{t('mealsPlanned')}</span>
           </div>
@@ -138,21 +135,23 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
               href={bringLink}
               onClick={handleBringLinkClick}
               rel="external"
-              className="min-h-12 rounded-full bg-[#526647] px-4 text-white flex items-center justify-center gap-2 text-sm font-semibold shadow-md active:scale-95 transition"
+              data-bring-status={bringStatus}
+              className="bring-compact active:scale-95 transition"
               aria-label={t('sendWeekToBring')}
             >
-              {bringStatus === 'opened' ? <Check size={18} /> : <ShoppingCart size={18} />}
-              <span>{bringStatus === 'opened' ? t('openedInBring') : t('sendWeekToBring')}</span>
+              {bringStatus === 'opened' ? <Check size={16} /> : <ShoppingCart size={16} />}
+              <span>Bring</span>
             </a>
           ) : (
             <button
               onClick={() => setBringLinkRevision(revision => revision + 1)}
               disabled={plannerIngredients.length === 0 || bringStatus === 'preparing' || bringStatus === 'sign-in-required' || bringStatus === 'not-configured'}
-              className="min-h-12 rounded-full bg-[#526647] px-4 text-white flex items-center justify-center gap-2 text-sm font-semibold shadow-md active:scale-95 transition disabled:opacity-40"
+              data-bring-status={bringStatus}
+              className="bring-compact active:scale-95 transition disabled:opacity-40"
               aria-label={t('sendWeekToBring')}
             >
-              <ShoppingCart size={18} />
-              <span>{bringStatus === 'preparing' ? t('preparingBring') : bringStatus === 'error' ? t('retryBring') : t('sendWeekToBring')}</span>
+              <ShoppingCart size={16} />
+              <span>{bringStatus === 'preparing' ? 'Bring…' : 'Bring'}</span>
             </button>
           )}
         </div>

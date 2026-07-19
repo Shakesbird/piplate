@@ -108,8 +108,7 @@ const App: React.FC = () => {
       <section className="pt-5 md:pt-10">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="eyebrow">{t('galleryEyebrow')}</p>
-            <h1 className="display-title mt-2">{t('galleryTitle')}</h1>
+            <h1 className="display-title">{t('galleryTitle')}</h1>
           </div>
           <div className="hidden sm:flex h-16 w-16 rounded-full bg-[#D95D39] text-white items-center justify-center font-semibold">
             {recipes.length}
@@ -185,7 +184,7 @@ const App: React.FC = () => {
   );
 
   const renderSettings = () => (
-    <div className="app-container pb-32 md:pb-16 pt-6 md:pt-10 max-w-4xl">
+    <div className="app-container settings-page pt-6 md:pt-10 max-w-4xl">
       <p className="eyebrow">{t('settingsEyebrow')}</p>
       <h1 className="display-title mt-2">{t('settings')}</h1>
       <p className="mt-3 text-[#756E64] max-w-xl">{t('settingsDescription')}</p>
@@ -213,7 +212,7 @@ const App: React.FC = () => {
 
       <SyncSettings sync={householdSync} />
 
-      <section data-testid="install-settings" className="mt-4 rounded-[2rem] border border-[#DED8CD] bg-white/80 p-5 sm:p-6 shadow-[0_18px_60px_rgba(47,43,37,0.06)]">
+      {!isInstalled && <section data-testid="install-settings" className="mt-4 rounded-[2rem] border border-[#DED8CD] bg-white/80 p-5 sm:p-6 shadow-[0_18px_60px_rgba(47,43,37,0.06)]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
             <span className="h-12 w-12 shrink-0 rounded-2xl bg-[#F8E9E4] text-[#D95D39] grid place-items-center">
@@ -222,21 +221,17 @@ const App: React.FC = () => {
             <div>
               <h2 className="font-display text-2xl">{t('installApp')}</h2>
               <p className="mt-1 text-sm text-[#756E64] max-w-lg">
-                {isInstalled
-                  ? t('installedDescription')
-                  : isIosSafari
-                    ? t('iosInstallDescription')
-                    : isIos
-                      ? t('iosOpenInSafariDescription')
-                      : canInstall
-                        ? t('installDescription')
-                        : t('installUnavailableDescription')}
+                {isIosSafari
+                  ? t('iosInstallDescription')
+                  : isIos
+                    ? t('iosOpenInSafariDescription')
+                    : canInstall
+                      ? t('installDescription')
+                      : t('installUnavailableDescription')}
               </p>
             </div>
           </div>
-          {isInstalled ? (
-            <span className="self-start sm:self-auto rounded-full bg-[#E8F1E8] px-4 py-2.5 text-sm font-semibold text-[#4E6B4E]">{t('installed')}</span>
-          ) : isIosSafari ? (
+          {isIosSafari ? (
             <button
               onClick={() => setShowIosInstallGuide(true)}
               className="self-start sm:self-auto min-h-11 rounded-full bg-[#2D2A26] px-5 text-white flex items-center gap-2 font-semibold text-sm active:scale-95 transition"
@@ -256,18 +251,16 @@ const App: React.FC = () => {
             <span className="self-start sm:self-auto rounded-full bg-[#EEE8DD] px-4 py-2.5 text-sm font-semibold text-[#756E64]">{t('installUnavailable')}</span>
           )}
         </div>
-      </section>
+      </section>}
 
-      <section className="mt-4 rounded-[2rem] border border-[#DED8CD] bg-white/80 p-5 sm:p-6 shadow-[0_18px_60px_rgba(47,43,37,0.06)]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <span className="h-12 w-12 shrink-0 rounded-2xl bg-[#EEE7F4] text-[#775A8C] grid place-items-center"><History size={22} /></span>
-            <div>
-              <h2 className="font-display text-2xl">{t('currentPatch')}</h2>
-              <p className="mt-1 text-sm text-[#756E64]">{t('currentPatchDescription', { version: CURRENT_RELEASE.version })}</p>
-            </div>
+      <section data-testid="current-patch" className="mt-4 rounded-2xl border border-[#DED8CD] bg-white/70 px-4 py-3 shadow-[0_10px_35px_rgba(47,43,37,0.04)]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5 text-[#4F4941]">
+            <History size={18} className="shrink-0 text-[#775A8C]" />
+            <span className="truncate text-sm font-semibold">{t('currentPatch')}</span>
+            <span className="shrink-0 text-xs text-[#958D80]">v{CURRENT_RELEASE.version}</span>
           </div>
-          <button onClick={() => setShowReleaseNotes(true)} className="self-start sm:self-auto min-h-11 rounded-full bg-[#EEE8DD] px-5 text-sm font-semibold text-[#4F4941] active:scale-95 transition">{t('showChangelog')}</button>
+          <button onClick={() => setShowReleaseNotes(true)} className="min-h-11 shrink-0 rounded-full bg-[#EEE8DD] px-3.5 text-xs font-semibold text-[#4F4941] active:scale-95 transition">{t('showChangelog')}</button>
         </div>
       </section>
 
@@ -316,9 +309,8 @@ const App: React.FC = () => {
 
       <nav className="mobile-nav md:hidden" style={{ pointerEvents: showReleaseNotes || showIosInstallGuide || isModalOpen ? 'none' : 'auto' }} aria-label={t('mobileNavigation')} aria-hidden={showReleaseNotes || showIosInstallGuide || isModalOpen}>
         <button onClick={() => setView('GALLERY')} className={`mobile-nav-item ${view === 'GALLERY' ? 'mobile-nav-active' : ''}`}><LayoutGrid size={21} /><span>{t('recipes')}</span></button>
-        <button onClick={() => setView('PLANNER')} className={`mobile-nav-item ${view === 'PLANNER' ? 'mobile-nav-active' : ''}`}><CalendarDays size={21} /><span>{t('planner')}</span></button>
         <button onClick={handleAddNew} className="mobile-add" aria-label={t('addRecipe')}><Plus size={26} /></button>
-        <button onClick={() => setView('SETTINGS')} className={`mobile-nav-item ${view === 'SETTINGS' ? 'mobile-nav-active' : ''}`}><Settings size={21} /><span>{t('settings')}</span></button>
+        <button onClick={() => setView('PLANNER')} className={`mobile-nav-item ${view === 'PLANNER' ? 'mobile-nav-active' : ''}`}><CalendarDays size={21} /><span>{t('planner')}</span></button>
       </nav>
 
       <DishModal

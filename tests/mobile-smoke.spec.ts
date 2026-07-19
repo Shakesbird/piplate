@@ -151,12 +151,25 @@ test('recipe editor contains no unfinished AI controls', async ({ page }) => {
 
 test('gallery, planner, and settings remain usable on mobile', async ({ page }) => {
   const header = page.getByTestId('app-header');
+  const navigation = mobileNavigation(page);
   await expect(header.locator('img')).toHaveAttribute('src', './icons/piplate-192.png');
   await expect(header.getByRole('button', { name: /add recipe|rezept hinzufügen/i })).toHaveCount(0);
+  await expect(page.getByText(/Your recipe collection|Deine Rezeptsammlung/i)).toHaveCount(0);
   await expect(page.locator('.filter-chip')).toHaveCount(0);
+  await expect(navigation.getByRole('button', { name: /settings|einstellungen/i })).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 
   await openPlanner(page);
+  const plannerHeader = page.getByTestId('planner-header');
+  const bringButton = plannerHeader.getByRole('button', { name: /open in Bring|in Bring/i });
+  await expect.poll(async () => {
+    const plannerHeadingBox = await plannerHeader.getByRole('heading', { name: /weekly planner|wochenplan/i }).boundingBox();
+    const bringButtonBox = await bringButton.boundingBox();
+    if (!plannerHeadingBox || !bringButtonBox) return Number.POSITIVE_INFINITY;
+    return Math.abs((plannerHeadingBox.y + plannerHeadingBox.height / 2) - (bringButtonBox.y + bringButtonBox.height / 2));
+  }).toBeLessThan(14);
+  await expect.poll(async () => (await bringButton.boundingBox())?.width ?? Number.POSITIVE_INFINITY).toBeLessThan(100);
+  await expect(page.getByText(/Seven days, one view|Sieben Tage auf einen Blick/i)).toHaveCount(0);
   await expect(page.getByText(/Tap \+ to plan|Tippe auf \+/i)).toHaveCount(0);
   await expect(page.getByText(/Bring handles your login|Die Anmeldung übernimmt Bring/i)).toHaveCount(0);
   await expect(header.getByRole('button', { name: /settings|einstellungen/i })).toBeVisible();
@@ -165,6 +178,21 @@ test('gallery, planner, and settings remain usable on mobile', async ({ page }) 
   await openSettings(page);
   await expect(page.getByText(/chatgpt|gemini/i)).toHaveCount(0);
   await expect(page.getByText(/week order|reihenfolge der woche/i)).toHaveCount(0);
+  await expectNoHorizontalOverflow(page);
+});
+
+test('installed mode hides installation controls and keeps patch details compact', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'standalone', { configurable: true, value: true });
+  });
+  await page.reload();
+  await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
+  await openSettings(page);
+
+  await expect(page.getByTestId('install-settings')).toHaveCount(0);
+  const patchSection = page.getByTestId('current-patch');
+  await expect(patchSection).toBeVisible();
+  expect((await patchSection.boundingBox())!.height).toBeLessThan(80);
   await expectNoHorizontalOverflow(page);
 });
 
@@ -212,7 +240,7 @@ test('planner starts with today and keeps planned meals after reload', async ({ 
   const bringLink = page.getByRole('link', { name: /open in bring|in bring öffnen/i });
   await expect(bringLink).toHaveAttribute('href', /api\.getbring\.com\/rest\/bringrecipes\/deeplink\?/);
   await bringLink.click();
-  await expect(bringLink).toContainText(/bring opened|bring geöffnet/i);
+  await expect(bringLink).toHaveAttribute('data-bring-status', 'opened');
   const bringImport = await page.evaluate(() => (
     window as Window & {
       __PIPLATE_LAST_BRING_IMPORT__?: {
@@ -255,7 +283,8 @@ test('Bring preparation can be retried after a temporary Android or iPhone failu
   await expect(page.getByRole('alert')).toBeVisible();
   const retryButton = page.getByRole('button', { name: /open in Bring|in Bring/i });
   await expect(retryButton).toBeEnabled();
-  await expect(retryButton).toContainText(/Try Bring again|Bring erneut/i);
+  await expect(retryButton).toHaveAttribute('data-bring-status', 'error');
+  await expect(retryButton).toHaveText('Bring');
 
   await page.evaluate(() => {
     const testWindow = window as Window & {

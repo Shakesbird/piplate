@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-19-stable-patches',
-  version: '1.5.8',
+  id: '2026-07-19-minimal-navigation',
+  version: '1.5.9',
   en: {
     lines: [
-      'App patches now recover more reliably from slow or interrupted updates.',
+      'Navigation, planner actions, and installed-app settings are now more compact.',
     ],
   },
   de: {
     lines: [
-      'App-Patches erholen sich jetzt zuverlässiger von langsamen oder unterbrochenen Updates.',
+      'Navigation, Wochenplan-Aktionen und Einstellungen der installierten App sind jetzt kompakter.',
     ],
   },
 } as const;
