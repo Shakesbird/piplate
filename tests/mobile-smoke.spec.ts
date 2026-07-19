@@ -258,6 +258,37 @@ test('Bring preparation can be retried after a temporary Android or iPhone failu
   );
 });
 
+test('returning from Bring keeps the prepared export usable', async ({ page }) => {
+  await page.evaluate(() => {
+    const testWindow = window as Window & {
+      __PIPLATE_BRING_PREPARATIONS__?: number;
+      __PIPLATE_BRING_TEST__?: () => void;
+    };
+    testWindow.__PIPLATE_BRING_PREPARATIONS__ = 0;
+    testWindow.__PIPLATE_BRING_TEST__ = () => {
+      testWindow.__PIPLATE_BRING_PREPARATIONS__ = (testWindow.__PIPLATE_BRING_PREPARATIONS__ || 0) + 1;
+      if (testWindow.__PIPLATE_BRING_PREPARATIONS__ > 1) {
+        throw new Error('unexpected duplicate Bring preparation');
+      }
+    };
+  });
+
+  await openPlanner(page);
+  const todaySection = page.locator('[data-planner-day]').first();
+  await todaySection.getByRole('button', { name: /add recipe|rezept zu/i }).click();
+  await todaySection.getByRole('button', { name: /gnocci/i }).click();
+
+  const bringLink = page.getByRole('link', { name: /open in Bring|in Bring/i });
+  await expect(bringLink).toHaveAttribute('href', /api\.getbring\.com\/rest\/bringrecipes\/deeplink\?/);
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+
+  await expect(bringLink).toHaveAttribute('href', /api\.getbring\.com\/rest\/bringrecipes\/deeplink\?/);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => (
+    window as Window & { __PIPLATE_BRING_PREPARATIONS__?: number }
+  ).__PIPLATE_BRING_PREPARATIONS__)).toBe(1);
+});
+
 test('account and household sync setup works on mobile', async ({ page }) => {
   await openSettings(page);
   const syncSettings = page.getByTestId('sync-settings');

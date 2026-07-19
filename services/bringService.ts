@@ -23,7 +23,8 @@ declare global {
   }
 }
 
-const IMPORT_LIFETIME_MS = 10 * 60 * 1000;
+const IMPORT_LIFETIME_MS = 9 * 60 * 1000;
+const IMPORT_CLEANUP_MS = 10 * 60 * 1000;
 const LAST_IMPORT_KEY = 'piplate-bring-import-path';
 
 const normalizeIngredient = (ingredient: string) => ingredient.trim().replace(/\s+/g, ' ');
@@ -102,7 +103,7 @@ const scheduleRemoval = (importReference: DatabaseReference, importPath: string)
         }
       })
       .catch(() => undefined);
-  }, IMPORT_LIFETIME_MS);
+  }, IMPORT_CLEANUP_MS);
 };
 
 export const preparePlannerIngredientsForBring = async (
@@ -123,14 +124,11 @@ export const preparePlannerIngredientsForBring = async (
     throw new Error('bring/not-configured');
   }
 
+  await firebaseAuth?.authStateReady();
   const user = firebaseAuth?.currentUser;
   if (!user) throw new Error('bring/sign-in-required');
 
   const previousPath = localStorage.getItem(LAST_IMPORT_KEY);
-  if (previousPath?.startsWith('bringImports/')) {
-    void remove(ref(firebaseDatabase, previousPath)).catch(() => undefined);
-  }
-
   const importId = crypto.randomUUID();
   const importPath = `bringImports/${importId}`;
   const importReference = ref(firebaseDatabase, importPath);
@@ -142,6 +140,9 @@ export const preparePlannerIngredientsForBring = async (
 
   localStorage.setItem(LAST_IMPORT_KEY, importPath);
   scheduleRemoval(importReference, importPath);
+  if (previousPath?.startsWith('bringImports/') && previousPath !== importPath) {
+    void remove(ref(firebaseDatabase, previousPath)).catch(() => undefined);
+  }
 
   const publicRecipeUrl = `${firebaseDatabaseUrl}/${importPath}/recipe.json`;
   return buildBringDeeplinkUrl(publicRecipeUrl);

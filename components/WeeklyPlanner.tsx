@@ -34,6 +34,10 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
     () => collectPlannerIngredients(recipes, plan, dayOrder),
     [recipes, plan, dayOrder],
   );
+  const plannerIngredientsKey = useMemo(
+    () => JSON.stringify(plannerIngredients),
+    [plannerIngredients],
+  );
   const plannerShoppingTitle = t('plannerShoppingTitle');
 
   useEffect(() => {
@@ -74,7 +78,7 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
       cancelled = true;
       if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
     };
-  }, [plannerIngredients, plannerShoppingTitle, bringLinkRevision]);
+  }, [plannerIngredientsKey, plannerShoppingTitle, bringLinkRevision]);
 
   const handleBringLinkClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (import.meta.env.DEV && window.__PIPLATE_BRING_TEST__) event.preventDefault();

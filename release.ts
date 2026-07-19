@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-19-bring-android-connection',
-  version: '1.5.4',
+  id: '2026-07-19-repeat-bring-export',
+  version: '1.5.5',
   en: {
     lines: [
-      'Bring preparation now works reliably on Android and can be retried.',
+      'The weekly planner can now be opened in Bring repeatedly.',
     ],
   },
   de: {
     lines: [
-      'Die Bring-Übergabe funktioniert auf Android jetzt zuverlässig und kann wiederholt werden.',
+      'Der Wochenplan kann jetzt wiederholt in Bring geöffnet werden.',
     ],
   },
 } as const;
