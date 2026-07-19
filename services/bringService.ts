@@ -19,6 +19,7 @@ export interface BringRecipePayload {
 
 declare global {
   interface Window {
+    __PIPLATE_BRING_BASE_URL__?: string;
     __PIPLATE_BRING_TEST__?: (recipe: BringRecipePayload, deeplinkUrl: string) => void | Promise<void>;
   }
 }
@@ -110,7 +111,10 @@ export const preparePlannerIngredientsForBring = async (
   title: string,
   ingredients: string[],
 ): Promise<string> => {
-  const linkOutUrl = new URL(import.meta.env.BASE_URL, window.location.origin).toString();
+  const baseUrl = import.meta.env.DEV && window.__PIPLATE_BRING_BASE_URL__
+    ? window.__PIPLATE_BRING_BASE_URL__
+    : import.meta.env.BASE_URL;
+  const linkOutUrl = new URL(baseUrl, window.location.href).toString();
   const recipe = createBringRecipePayload(title, ingredients, linkOutUrl);
 
   if (import.meta.env.DEV && window.__PIPLATE_BRING_TEST__) {

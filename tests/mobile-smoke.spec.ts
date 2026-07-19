@@ -289,6 +289,29 @@ test('returning from Bring keeps the prepared export usable', async ({ page }) =
   ).__PIPLATE_BRING_PREPARATIONS__)).toBe(1);
 });
 
+test('Bring returns to the deployed GitHub Pages app path', async ({ page }) => {
+  await page.evaluate(() => {
+    (window as Window & { __PIPLATE_BRING_BASE_URL__?: string }).__PIPLATE_BRING_BASE_URL__ = './';
+    window.history.replaceState({}, '', '/piplate/');
+  });
+
+  await openPlanner(page);
+  const todaySection = page.locator('[data-planner-day]').first();
+  await todaySection.getByRole('button', { name: /add recipe|rezept zu/i }).click();
+  await todaySection.getByRole('button', { name: /gnocci/i }).click();
+
+  await expect(page.getByRole('link', { name: /open in Bring|in Bring/i })).toHaveAttribute(
+    'href',
+    /api\.getbring\.com\/rest\/bringrecipes\/deeplink\?/,
+  );
+  const linkOutUrl = await page.evaluate(() => (
+    window as Window & {
+      __PIPLATE_LAST_BRING_IMPORT__?: { recipe: { linkOutUrl: string } };
+    }
+  ).__PIPLATE_LAST_BRING_IMPORT__?.recipe.linkOutUrl);
+  expect(linkOutUrl).toBe('http://127.0.0.1:4173/piplate/');
+});
+
 test('account and household sync setup works on mobile', async ({ page }) => {
   await openSettings(page);
   const syncSettings = page.getByTestId('sync-settings');

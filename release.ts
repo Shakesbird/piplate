@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-19-repeat-bring-export',
-  version: '1.5.5',
+  id: '2026-07-19-bring-return-link',
+  version: '1.5.6',
   en: {
     lines: [
-      'The weekly planner can now be opened in Bring repeatedly.',
+      'Returning from Bring now opens PiPlate instead of a missing page.',
     ],
   },
   de: {
     lines: [
-      'Der Wochenplan kann jetzt wiederholt in Bring geöffnet werden.',
+      'Die Rückkehr aus Bring öffnet jetzt PiPlate statt einer fehlenden Seite.',
     ],
   },
 } as const;
