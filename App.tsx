@@ -27,6 +27,15 @@ import { CURRENT_RELEASE } from './release';
 import { useHouseholdSync } from './hooks/useHouseholdSync';
 import SyncSettings from './components/SyncSettings';
 
+type RecipeSort = 'newest' | 'oldest' | 'name-asc' | 'name-desc';
+
+const getInitialRecipeSort = (): RecipeSort => {
+  const savedSort = localStorage.getItem('piplate-recipe-sort');
+  return savedSort === 'oldest' || savedSort === 'name-asc' || savedSort === 'name-desc'
+    ? savedSort
+    : 'newest';
+};
+
 type ElectronIpcRenderer = {
   invoke: (channel: string) => Promise<boolean | void>;
 };
@@ -52,6 +61,7 @@ const App: React.FC = () => {
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [recipeSort, setRecipeSort] = useState<RecipeSort>(getInitialRecipeSort);
   const [isMaximized, setIsMaximized] = useState(false);
   const [showReleaseNotes, setShowReleaseNotes] = useState(() => localStorage.getItem('piplate-seen-release') !== CURRENT_RELEASE.id);
   const [showIosInstallGuide, setShowIosInstallGuide] = useState(false);
@@ -99,9 +109,20 @@ const App: React.FC = () => {
     return () => { isMounted = false; };
   }, [electronIpc]);
 
-  const filteredRecipes = recipes.filter(recipe =>
-    recipe.title.toLowerCase().includes(searchQuery.trim().toLowerCase())
-  );
+  useEffect(() => {
+    localStorage.setItem('piplate-recipe-sort', recipeSort);
+  }, [recipeSort]);
+
+  const filteredRecipes = recipes
+    .filter(recipe => recipe.title.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    .sort((left, right) => {
+      if (recipeSort === 'name-asc') return left.title.localeCompare(right.title, language, { sensitivity: 'base', numeric: true });
+      if (recipeSort === 'name-desc') return right.title.localeCompare(left.title, language, { sensitivity: 'base', numeric: true });
+
+      const leftTimestamp = left.updatedAt ?? left.createdAt;
+      const rightTimestamp = right.updatedAt ?? right.createdAt;
+      return recipeSort === 'oldest' ? leftTimestamp - rightTimestamp : rightTimestamp - leftTimestamp;
+    });
 
   const renderGallery = () => (
     <div className="app-container pb-32 md:pb-16">
@@ -140,11 +161,27 @@ const App: React.FC = () => {
       </section>
 
       <section className="mt-7 md:mt-10">
-        <div className="flex items-center justify-between mb-4 md:mb-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 md:mb-5">
           <h2 className="font-semibold text-lg md:text-xl text-[#2D2A26]">
-            {searchQuery ? t('searchResults') : t('recentlySaved')}
+            {searchQuery ? t('searchResults') : t('recipes')}
           </h2>
-          <span className="text-sm text-[#8E887E]">{t('recipeCount', { count: filteredRecipes.length })}</span>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="whitespace-nowrap text-xs sm:text-sm text-[#8E887E]">{t('recipeCount', { count: filteredRecipes.length })}</span>
+            <label>
+              <span className="sr-only">{t('sortRecipes')}</span>
+              <select
+                value={recipeSort}
+                onChange={event => setRecipeSort(event.target.value as RecipeSort)}
+                className="recipe-sort"
+                aria-label={t('sortRecipes')}
+              >
+                <option value="newest">{t('sortNewest')}</option>
+                <option value="oldest">{t('sortOldest')}</option>
+                <option value="name-asc">{t('sortNameAsc')}</option>
+                <option value="name-desc">{t('sortNameDesc')}</option>
+              </select>
+            </label>
+          </div>
         </div>
 
         {recipesLoading && (

@@ -123,6 +123,72 @@ test('recipe previews use small, prioritised WebP images', async ({ page }) => {
   expect(previews.slice(4).every(image => image.loading === 'lazy' && image.fetchPriority === 'low' && image.decoding === 'async')).toBe(true);
 });
 
+test('recipes can be sorted by name and the choice persists', async ({ page }) => {
+  const sortSelect = page.getByLabel(/sort recipes|rezepte sortieren/i);
+  await expect(sortSelect).toBeVisible();
+
+  await sortSelect.selectOption('name-asc');
+  const ascendingTitles = await page.locator('article h3').allTextContents();
+  expect(ascendingTitles).toHaveLength(10);
+  expect(ascendingTitles).toEqual([...ascendingTitles].sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base', numeric: true })));
+
+  await sortSelect.selectOption('name-desc');
+  const descendingTitles = await page.locator('article h3').allTextContents();
+  expect(descendingTitles).toEqual([...ascendingTitles].reverse());
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('piplate-recipe-sort'))).toBe('name-desc');
+
+  await page.reload();
+  await expect(page.getByLabel(/sort recipes|rezepte sortieren/i)).toHaveValue('name-desc');
+  await expect(page.locator('article h3').first()).toHaveText(descendingTitles[0]);
+  await expectNoHorizontalOverflow(page);
+});
+
+test('the complete recipe name remains visible in the first card', async ({ page }) => {
+  const longTitle = 'A beautifully layered roasted vegetable lasagne for the entire family';
+  await page.evaluate(async title => {
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('PiPlateDB');
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction('recipes', 'readwrite');
+        transaction.objectStore('recipes').put({
+          id: 'long-title-first-card',
+          title,
+          ingredients: ['Vegetables'],
+          instructions: ['Layer and bake'],
+          portions: 4,
+          nutrition: { calories: 480, protein: 18, carbs: 62, fat: 16 },
+          imageUri: './recipe-images/gnocchi-chicken-pepper.webp',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+        transaction.oncomplete = () => { database.close(); resolve(); };
+        transaction.onerror = () => reject(transaction.error);
+      };
+    });
+  }, longTitle);
+
+  await page.reload();
+  await page.getByLabel(/sort recipes|rezepte sortieren/i).selectOption('newest');
+  const firstTitle = page.locator('article h3').first();
+  await expect(firstTitle).toHaveText(longTitle);
+  const titleLayout = await firstTitle.evaluate(element => {
+    const titleBox = element.getBoundingClientRect();
+    const cardBox = element.closest('article')!.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      lineClamp: style.getPropertyValue('-webkit-line-clamp'),
+      fullyRendered: element.scrollHeight <= element.clientHeight + 1,
+      insideCard: titleBox.top >= cardBox.top && titleBox.bottom <= cardBox.bottom,
+    };
+  });
+  expect(titleLayout.lineClamp).toBe('none');
+  expect(titleLayout.fullyRendered).toBe(true);
+  expect(titleLayout.insideCard).toBe(true);
+  await expectNoHorizontalOverflow(page);
+});
+
 test('update repair keeps local recipes and returns to PiPlate', async ({ page }) => {
   await page.goto('/repair.html');
   await expect(page.getByRole('heading', { name: 'PiPlate reparieren' })).toBeVisible();
@@ -157,6 +223,26 @@ test('gallery, planner, and settings remain usable on mobile', async ({ page }) 
   await expect(page.getByText(/Your recipe collection|Deine Rezeptsammlung/i)).toHaveCount(0);
   await expect(page.locator('.filter-chip')).toHaveCount(0);
   await expect(navigation.getByRole('button', { name: /settings|einstellungen/i })).toHaveCount(0);
+  const recipeTab = navigation.getByRole('button', { name: /recipes|rezepte/i });
+  const plannerTab = navigation.getByRole('button', { name: /planner|wochenplan/i });
+  const addButton = navigation.getByRole('button', { name: /add recipe|rezept hinzuf/i });
+  const navigationAlignment = await (async () => {
+    const navigationBox = await navigation.boundingBox();
+    const recipeBox = await recipeTab.boundingBox();
+    const recipeIconBox = await recipeTab.locator('svg').boundingBox();
+    const plannerBox = await plannerTab.boundingBox();
+    const addBox = await addButton.boundingBox();
+    if (!navigationBox || !recipeBox || !recipeIconBox || !plannerBox || !addBox) throw new Error('Mobile navigation geometry is unavailable');
+    const center = (box: { x: number; width: number }) => box.x + box.width / 2;
+    return {
+      addToNavigation: Math.abs(center(addBox) - center(navigationBox)),
+      tabSymmetry: Math.abs((center(addBox) - center(recipeBox)) - (center(plannerBox) - center(addBox))),
+      iconToHighlight: Math.abs(center(recipeIconBox) - center(recipeBox)),
+    };
+  })();
+  expect(navigationAlignment.addToNavigation).toBeLessThan(1.5);
+  expect(navigationAlignment.tabSymmetry).toBeLessThan(1.5);
+  expect(navigationAlignment.iconToHighlight).toBeLessThan(1.5);
   await expectNoHorizontalOverflow(page);
 
   await openPlanner(page);

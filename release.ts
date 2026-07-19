@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-19-minimal-navigation',
-  version: '1.5.9',
+  id: '2026-07-19-recipe-sorting',
+  version: '1.6.0',
   en: {
     lines: [
-      'Navigation, planner actions, and installed-app settings are now more compact.',
+      'Recipes can now be sorted, with full card titles and precisely aligned mobile navigation.',
     ],
   },
   de: {
     lines: [
-      'Navigation, Wochenplan-Aktionen und Einstellungen der installierten App sind jetzt kompakter.',
+      'Rezepte lassen sich jetzt sortieren, mit vollst\u00e4ndigen Kartentiteln und genau ausgerichteter mobiler Navigation.',
     ],
   },
 } as const;

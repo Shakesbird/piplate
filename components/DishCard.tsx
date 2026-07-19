@@ -42,34 +42,36 @@ const DishCard: React.FC<DishCardProps> = ({ recipe, onClick, onAddToDay, priori
       tabIndex={0}
       onClick={onClick}
       onKeyDown={handleKeyDown}
-      className="group relative min-w-0 w-full cursor-pointer aspect-[4/5] sm:aspect-[5/6] lg:aspect-[4/3] rounded-[1.35rem] md:rounded-[1.75rem] overflow-hidden bg-[#DED8CD] shadow-[0_12px_32px_rgba(47,43,37,0.10)] transition duration-300 md:hover:-translate-y-1 md:hover:shadow-[0_20px_45px_rgba(47,43,37,0.16)] focus:outline-none focus:ring-4 focus:ring-[#D95D39]/25"
+      className="group relative min-w-0 w-full cursor-pointer rounded-[1.35rem] md:rounded-[1.75rem] overflow-hidden bg-white shadow-[0_12px_32px_rgba(47,43,37,0.10)] transition duration-300 md:hover:-translate-y-1 md:hover:shadow-[0_20px_45px_rgba(47,43,37,0.16)] focus:outline-none focus:ring-4 focus:ring-[#D95D39]/25"
       aria-label={t('openRecipe', { title: recipe.title })}
     >
-      <img
-        src={getRecipeImageSource(recipe.imageUri)}
-        onError={event => { event.currentTarget.src = DEFAULT_RECIPE_IMAGE; }}
-        alt=""
-        className="block h-full w-full max-w-full object-cover transition duration-700 md:group-hover:scale-[1.04]"
-        style={{ width: '100%', maxWidth: '100%' }}
-        decoding="async"
-        loading={prioritizeImage ? 'eager' : 'lazy'}
-        fetchPriority={prioritizeImage ? 'high' : 'low'}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/5" />
+      <div className="recipe-card-image relative overflow-hidden bg-[#DED8CD]">
+        <img
+          src={getRecipeImageSource(recipe.imageUri)}
+          onError={event => { event.currentTarget.src = DEFAULT_RECIPE_IMAGE; }}
+          alt=""
+          className="block h-full w-full max-w-full object-cover transition duration-700 md:group-hover:scale-[1.04]"
+          style={{ width: '100%', maxWidth: '100%' }}
+          decoding="async"
+          loading={prioritizeImage ? 'eager' : 'lazy'}
+          fetchPriority={prioritizeImage ? 'high' : 'low'}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
-      <button
-        onClick={togglePicker}
-        className={`absolute right-2.5 top-2.5 md:right-4 md:top-4 h-11 w-11 rounded-full grid place-items-center backdrop-blur-md border border-white/30 shadow-lg transition active:scale-90 ${savedDay ? 'bg-[#A8B79A] text-[#263020]' : 'bg-white/90 text-[#2D2A26]'}`}
-        aria-label={savedDay ? t('addedToDay', { day: dayName(savedDay) }) : t('addToPlanner')}
-      >
-        {savedDay ? <Check size={19} /> : <CalendarPlus size={19} />}
-      </button>
+        <button
+          onClick={togglePicker}
+          className={`absolute right-2.5 top-2.5 md:right-4 md:top-4 h-11 w-11 rounded-full grid place-items-center backdrop-blur-md border border-white/30 shadow-lg transition active:scale-90 ${savedDay ? 'bg-[#A8B79A] text-[#263020]' : 'bg-white/90 text-[#2D2A26]'}`}
+          aria-label={savedDay ? t('addedToDay', { day: dayName(savedDay) }) : t('addToPlanner')}
+        >
+          {savedDay ? <Check size={19} /> : <CalendarPlus size={19} />}
+        </button>
+      </div>
 
-      <div className="absolute inset-x-0 bottom-0 p-3.5 md:p-5 text-white">
-        <h3 className="font-display text-lg leading-[1.05] sm:text-xl md:text-2xl line-clamp-2 text-shadow-sm">{recipe.title}</h3>
-        <div className="mt-2.5 flex items-center gap-3 text-[11px] sm:text-xs text-white/80">
+      <div className="p-3.5 md:p-5 text-[#2D2A26]">
+        <h3 className="recipe-card-title font-display text-lg leading-[1.15] sm:text-xl md:text-2xl">{recipe.title}</h3>
+        <div className="mt-2.5 flex items-center gap-3 text-[11px] sm:text-xs text-[#756E64]">
           <span className="flex items-center gap-1"><Users size={13} /> {recipe.portions}</span>
-          <span className="h-1 w-1 rounded-full bg-white/50" />
+          <span className="h-1 w-1 rounded-full bg-[#B7AFA3]" />
           <span className="flex items-center gap-1"><Flame size={13} /> {recipe.nutrition.calories} kcal</span>
         </div>
       </div>
