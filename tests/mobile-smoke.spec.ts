@@ -292,6 +292,46 @@ test('gallery, planner, and settings remain usable on mobile', async ({ page }) 
   await expectNoHorizontalOverflow(page);
 });
 
+test('Android back and iPhone swipe-back follow the PiPlate page history', async ({ page }, testInfo) => {
+  await openPlanner(page);
+  await expect(page.getByRole('heading', { name: /weekly planner|wochenplan/i })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.history.state?.view)).toBe('PLANNER');
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: /weekly planner|wochenplan/i })).toBeVisible();
+  await page.evaluate(() => window.history.back());
+  await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
+
+  await openSettings(page);
+  await page.evaluate(() => window.history.back());
+  await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
+
+  await page.getByRole('button', { name: /gnocci.*(open|öffnen)/i }).click();
+  const recipeDialog = page.getByRole('dialog', { name: /gnocci/i });
+  await expect(recipeDialog).toBeVisible();
+  await page.evaluate(() => window.history.back());
+  await expect(recipeDialog).toBeHidden();
+  await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
+
+  const mobileAddButton = mobileNavigation(page).getByRole('button', { name: /add recipe|rezept hinzufügen/i });
+  await mobileAddButton.click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.evaluate(() => window.history.back());
+  await expect(page.getByRole('dialog')).toBeHidden();
+
+  if (testInfo.project.name === 'iphone-15') {
+    await openSettings(page);
+    const installSettings = page.getByTestId('install-settings');
+    await installSettings.getByRole('button', { name: /iPhone instructions|iPhone-Anleitung/i }).click();
+    await expect(page.getByRole('dialog', { name: /Install PiPlate|PiPlate installieren/i })).toBeVisible();
+    await page.evaluate(() => window.history.back());
+    await expect(page.getByRole('dialog', { name: /Install PiPlate|PiPlate installieren/i })).toBeHidden();
+    await expect(page.getByRole('heading', { name: /settings|einstellungen/i })).toBeVisible();
+  }
+
+  await expectNoHorizontalOverflow(page);
+});
+
 test('installed mode hides installation controls and keeps patch details compact', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'standalone', { configurable: true, value: true });
@@ -367,8 +407,7 @@ test('planner starts with today and keeps planned meals after reload', async ({ 
   await expectNoHorizontalOverflow(page);
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
-  await openPlanner(page);
+  await expect(page.getByRole('heading', { name: /weekly planner|wochenplan/i })).toBeVisible();
 
   const reloadedTodaySection = page.locator('[data-planner-day]').first();
   await expect(reloadedTodaySection).toHaveAttribute('data-planner-day', today);
@@ -386,8 +425,7 @@ test('household size persists and avoids duplicate Bring quantities for leftover
   await expectNoHorizontalOverflow(page);
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
-  await openSettings(page);
+  await expect(page.getByRole('heading', { name: /settings|einstellungen/i })).toBeVisible();
   const persistedInput = page.getByTestId('household-size-input');
   await expect(persistedInput).toHaveValue('3');
   await persistedInput.fill('2');
@@ -444,7 +482,7 @@ test('household size persists and avoids duplicate Bring quantities for leftover
   });
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /settings|einstellungen/i })).toBeVisible();
   await openPlanner(page);
   await expect(page.getByRole('heading', { name: 'Two-day pasta' })).toHaveCount(2);
   await expect(page.getByRole('link', { name: /open in bring|in bring öffnen/i })).toBeVisible();

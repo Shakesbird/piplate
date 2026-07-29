@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CalendarDays,
   Download,
@@ -29,6 +29,24 @@ import SyncSettings from './components/SyncSettings';
 import HouseholdSizeSettings from './components/HouseholdSizeSettings';
 
 type RecipeSort = 'newest' | 'oldest' | 'name-asc' | 'name-desc';
+type AppOverlay = 'recipe' | 'new-recipe' | 'release-notes' | 'ios-install-guide';
+
+type AppHistoryState = {
+  piplate: true;
+  view: ViewState;
+  overlay?: AppOverlay;
+  recipeId?: string;
+};
+
+const isViewState = (value: unknown): value is ViewState =>
+  value === 'GALLERY' || value === 'PLANNER' || value === 'SETTINGS';
+
+const readAppHistoryState = (value: unknown): AppHistoryState | null => {
+  if (!value || typeof value !== 'object') return null;
+  const candidate = value as Partial<AppHistoryState>;
+  if (candidate.piplate !== true || !isViewState(candidate.view)) return null;
+  return candidate as AppHistoryState;
+};
 
 const getInitialRecipeSort = (): RecipeSort => {
   const savedSort = localStorage.getItem('piplate-recipe-sort');
@@ -47,6 +65,7 @@ type WindowWithElectron = Window & {
 };
 
 const App: React.FC = () => {
+  const initialHistoryState = readAppHistoryState(window.history.state);
   const { language, setLanguage, t } = useLanguage();
   const {
     recipes,
@@ -60,38 +79,77 @@ const App: React.FC = () => {
     updateHouseholdSize,
     moveRecipeBetweenDays,
   } = useRecipes();
-  const [view, setView] = useState<ViewState>('GALLERY');
-  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [view, setView] = useState<ViewState>(initialHistoryState?.view || 'GALLERY');
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(
+    initialHistoryState?.overlay === 'recipe' ? initialHistoryState.recipeId || null : null,
+  );
+  const [isModalOpen, setIsModalOpen] = useState(
+    initialHistoryState?.overlay === 'recipe' || initialHistoryState?.overlay === 'new-recipe',
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [recipeSort, setRecipeSort] = useState<RecipeSort>(getInitialRecipeSort);
   const [isMaximized, setIsMaximized] = useState(false);
-  const [showReleaseNotes, setShowReleaseNotes] = useState(() => localStorage.getItem('piplate-seen-release') !== CURRENT_RELEASE.id);
-  const [showIosInstallGuide, setShowIosInstallGuide] = useState(false);
+  const [showReleaseNotes, setShowReleaseNotes] = useState(
+    initialHistoryState?.overlay === 'release-notes'
+      || localStorage.getItem('piplate-seen-release') !== CURRENT_RELEASE.id,
+  );
+  const [showIosInstallGuide, setShowIosInstallGuide] = useState(
+    initialHistoryState?.overlay === 'ios-install-guide',
+  );
+  const historyInitializedRef = useRef(false);
+  const activeHistoryStateRef = useRef<AppHistoryState | null>(initialHistoryState);
   const { applyUpdate, canInstall, install, isInstalled, isIos, isIosSafari, isUpdating, updateAvailable } = usePwa();
   const householdSync = useHouseholdSync();
 
-  const dismissReleaseNotes = () => {
-    localStorage.setItem('piplate-seen-release', CURRENT_RELEASE.id);
+  const applyHistoryState = useCallback((state: AppHistoryState) => {
+    activeHistoryStateRef.current = state;
+    setView(state.view);
+    setSelectedRecipeId(state.overlay === 'recipe' ? state.recipeId || null : null);
+    setIsModalOpen(state.overlay === 'recipe' || state.overlay === 'new-recipe');
+    setShowReleaseNotes(state.overlay === 'release-notes');
+    setShowIosInstallGuide(state.overlay === 'ios-install-guide');
+  }, []);
+
+  const pushHistoryState = useCallback((state: AppHistoryState) => {
+    window.history.pushState(state, '', window.location.href);
+    applyHistoryState(state);
+  }, [applyHistoryState]);
+
+  const navigateToView = useCallback((nextView: ViewState) => {
+    const currentState = activeHistoryStateRef.current;
+    if (currentState?.view === nextView && !currentState.overlay) return;
+    pushHistoryState({ piplate: true, view: nextView });
+  }, [pushHistoryState]);
+
+  const closeHistoryOverlay = useCallback(() => {
+    if (activeHistoryStateRef.current?.overlay) {
+      window.history.back();
+      return;
+    }
+    setSelectedRecipeId(null);
+    setIsModalOpen(false);
     setShowReleaseNotes(false);
-  };
+    setShowIosInstallGuide(false);
+  }, []);
+
+  const dismissReleaseNotes = useCallback(() => {
+    localStorage.setItem('piplate-seen-release', CURRENT_RELEASE.id);
+    closeHistoryOverlay();
+  }, [closeHistoryOverlay]);
 
   const electronIpc = (window as WindowWithElectron).require?.('electron')?.ipcRenderer;
   const selectedRecipe = recipes.find(recipe => recipe.id === selectedRecipeId) || null;
 
   const handleOpenRecipe = (id: string) => {
-    setSelectedRecipeId(id);
-    setIsModalOpen(true);
+    pushHistoryState({ piplate: true, view, overlay: 'recipe', recipeId: id });
   };
 
   const handleAddNew = () => {
-    setSelectedRecipeId(null);
-    setIsModalOpen(true);
+    pushHistoryState({ piplate: true, view, overlay: 'new-recipe' });
   };
 
   const handleDeleteRecipe = (id: string) => {
-    setIsModalOpen(false);
-    setSelectedRecipeId(null);
+    closeHistoryOverlay();
     void deleteRecipe(id);
   };
 
@@ -101,6 +159,43 @@ const App: React.FC = () => {
       await updateWeeklyPlan(day, [...current, recipeId]);
     }
   };
+
+  useEffect(() => {
+    if (!historyInitializedRef.current) {
+      historyInitializedRef.current = true;
+
+      let currentState = readAppHistoryState(window.history.state);
+      if (!currentState) {
+        currentState = { piplate: true, view: 'GALLERY' };
+        window.history.replaceState(currentState, '', window.location.href);
+      }
+      applyHistoryState(currentState);
+
+      if (
+        localStorage.getItem('piplate-seen-release') !== CURRENT_RELEASE.id
+        && currentState.overlay !== 'release-notes'
+      ) {
+        const releaseState: AppHistoryState = {
+          piplate: true,
+          view: currentState.view,
+          overlay: 'release-notes',
+        };
+        window.history.pushState(releaseState, '', window.location.href);
+        applyHistoryState(releaseState);
+      }
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      if (activeHistoryStateRef.current?.overlay === 'release-notes') {
+        localStorage.setItem('piplate-seen-release', CURRENT_RELEASE.id);
+      }
+      const nextState = readAppHistoryState(event.state);
+      if (nextState) applyHistoryState(nextState);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [applyHistoryState]);
 
   useEffect(() => {
     let isMounted = true;
@@ -275,7 +370,7 @@ const App: React.FC = () => {
           </div>
           {isIosSafari ? (
             <button
-              onClick={() => setShowIosInstallGuide(true)}
+              onClick={() => pushHistoryState({ piplate: true, view, overlay: 'ios-install-guide' })}
               className="self-start sm:self-auto min-h-11 rounded-full bg-[#2D2A26] px-5 text-white flex items-center gap-2 font-semibold text-sm active:scale-95 transition"
             >
               <Share2 size={18} /> {t('showIosInstallGuide')}
@@ -302,7 +397,7 @@ const App: React.FC = () => {
             <span className="truncate text-sm font-semibold">{t('currentPatch')}</span>
             <span className="shrink-0 text-xs text-[#958D80]">v{CURRENT_RELEASE.version}</span>
           </div>
-          <button onClick={() => setShowReleaseNotes(true)} className="min-h-11 shrink-0 rounded-full bg-[#EEE8DD] px-3.5 text-xs font-semibold text-[#4F4941] active:scale-95 transition">{t('showChangelog')}</button>
+          <button onClick={() => pushHistoryState({ piplate: true, view, overlay: 'release-notes' })} className="min-h-11 shrink-0 rounded-full bg-[#EEE8DD] px-3.5 text-xs font-semibold text-[#4F4941] active:scale-95 transition">{t('showChangelog')}</button>
         </div>
       </section>
 
@@ -326,17 +421,17 @@ const App: React.FC = () => {
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden hover-scrollbar overscroll-contain">
         <header data-testid="app-header" className="sticky top-0 z-40 border-b border-[#DED8CD]/80 bg-[#F7F3EB]/90 backdrop-blur-xl safe-top">
           <div className="app-container h-[70px] flex items-center justify-between">
-            <button onClick={() => setView('GALLERY')} className="flex items-center gap-3" aria-label={t('openGallery')}>
+            <button onClick={() => navigateToView('GALLERY')} className="flex items-center gap-3" aria-label={t('openGallery')}>
               <img src="./icons/piplate-192.png" alt="" className="h-10 w-10 rounded-[14px] shadow-[0_8px_18px_rgba(217,93,57,0.22)]" />
               <span className="font-display text-[1.35rem] tracking-tight">PiPlate</span>
             </button>
 
             <nav className="hidden md:flex items-center rounded-full bg-[#EEE8DD] p-1" aria-label={t('primaryNavigation')}>
-              <button onClick={() => setView('GALLERY')} className={`desktop-nav ${view === 'GALLERY' ? 'desktop-nav-active' : ''}`}>{t('recipes')}</button>
-              <button onClick={() => setView('PLANNER')} className={`desktop-nav ${view === 'PLANNER' ? 'desktop-nav-active' : ''}`}>{t('planner')}</button>
+              <button onClick={() => navigateToView('GALLERY')} className={`desktop-nav ${view === 'GALLERY' ? 'desktop-nav-active' : ''}`}>{t('recipes')}</button>
+              <button onClick={() => navigateToView('PLANNER')} className={`desktop-nav ${view === 'PLANNER' ? 'desktop-nav-active' : ''}`}>{t('planner')}</button>
             </nav>
 
-            <button onClick={() => setView('SETTINGS')} className={`grid touch-button ${view === 'SETTINGS' ? 'bg-[#2D2A26] text-white' : 'bg-white text-[#5F584F] border border-[#DED8CD]'}`} aria-label={t('settings')}><Settings size={20} /></button>
+            <button onClick={() => navigateToView('SETTINGS')} className={`grid touch-button ${view === 'SETTINGS' ? 'bg-[#2D2A26] text-white' : 'bg-white text-[#5F584F] border border-[#DED8CD]'}`} aria-label={t('settings')}><Settings size={20} /></button>
           </div>
         </header>
 
@@ -357,15 +452,15 @@ const App: React.FC = () => {
       </div>
 
       <nav className="mobile-nav md:hidden" style={{ pointerEvents: showReleaseNotes || showIosInstallGuide || isModalOpen ? 'none' : 'auto' }} aria-label={t('mobileNavigation')} aria-hidden={showReleaseNotes || showIosInstallGuide || isModalOpen}>
-        <button onClick={() => setView('GALLERY')} className={`mobile-nav-item ${view === 'GALLERY' ? 'mobile-nav-active' : ''}`}><LayoutGrid size={21} /><span>{t('recipes')}</span></button>
+        <button onClick={() => navigateToView('GALLERY')} className={`mobile-nav-item ${view === 'GALLERY' ? 'mobile-nav-active' : ''}`}><LayoutGrid size={21} /><span>{t('recipes')}</span></button>
         <button onClick={handleAddNew} className="mobile-add" aria-label={t('addRecipe')}><Plus size={26} /></button>
-        <button onClick={() => setView('PLANNER')} className={`mobile-nav-item ${view === 'PLANNER' ? 'mobile-nav-active' : ''}`}><CalendarDays size={21} /><span>{t('planner')}</span></button>
+        <button onClick={() => navigateToView('PLANNER')} className={`mobile-nav-item ${view === 'PLANNER' ? 'mobile-nav-active' : ''}`}><CalendarDays size={21} /><span>{t('planner')}</span></button>
       </nav>
 
       <DishModal
         recipe={selectedRecipe}
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={closeHistoryOverlay}
         onSave={updated => { void saveRecipe(updated); }}
         onDelete={handleDeleteRecipe}
       />
@@ -383,7 +478,7 @@ const App: React.FC = () => {
                 <p className="eyebrow">iPhone · Safari</p>
                 <h2 id="ios-install-title" className="mt-2 font-display text-3xl">{t('iosInstallTitle')}</h2>
               </div>
-              <button onClick={() => setShowIosInstallGuide(false)} className="touch-button shrink-0 bg-[#EEE8DD] text-[#5F584F]" aria-label={t('closeIosInstallGuide')}><X size={19} /></button>
+              <button onClick={closeHistoryOverlay} className="touch-button shrink-0 bg-[#EEE8DD] text-[#5F584F]" aria-label={t('closeIosInstallGuide')}><X size={19} /></button>
             </div>
 
             <ol className="mt-6 space-y-3">
@@ -402,7 +497,7 @@ const App: React.FC = () => {
             </ol>
 
             <p className="mt-4 text-sm leading-relaxed text-[#756E64]">{t('iosInstallMissingAction')}</p>
-            <button onClick={() => setShowIosInstallGuide(false)} className="mt-6 min-h-12 w-full rounded-full bg-[#2D2A26] px-5 text-sm font-semibold text-white">{t('gotIt')}</button>
+            <button onClick={closeHistoryOverlay} className="mt-6 min-h-12 w-full rounded-full bg-[#2D2A26] px-5 text-sm font-semibold text-white">{t('gotIt')}</button>
           </section>
         </div>
       )}
