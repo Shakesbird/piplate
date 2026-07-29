@@ -26,6 +26,7 @@ import ReleaseNotesModal from './components/ReleaseNotesModal';
 import { CURRENT_RELEASE } from './release';
 import { useHouseholdSync } from './hooks/useHouseholdSync';
 import SyncSettings from './components/SyncSettings';
+import HouseholdSizeSettings from './components/HouseholdSizeSettings';
 
 type RecipeSort = 'newest' | 'oldest' | 'name-asc' | 'name-desc';
 
@@ -51,10 +52,12 @@ const App: React.FC = () => {
     recipes,
     recipesLoading,
     weeklyPlan,
+    householdSize,
     dayOrder,
     saveRecipe,
     deleteRecipe,
     updateWeeklyPlan,
+    updateHouseholdSize,
     moveRecipeBetweenDays,
   } = useRecipes();
   const [view, setView] = useState<ViewState>('GALLERY');
@@ -247,6 +250,8 @@ const App: React.FC = () => {
         </div>
       </section>
 
+      <HouseholdSizeSettings householdSize={householdSize} onChange={size => void updateHouseholdSize(size)} />
+
       <SyncSettings sync={householdSync} />
 
       {!isInstalled && <section data-testid="install-settings" className="mt-4 rounded-[2rem] border border-[#DED8CD] bg-white/80 p-5 sm:p-6 shadow-[0_18px_60px_rgba(47,43,37,0.06)]">
@@ -338,7 +343,14 @@ const App: React.FC = () => {
         <main>
           {view === 'GALLERY' && renderGallery()}
           {view === 'PLANNER' && (
-            <WeeklyPlanner recipes={recipes} plan={weeklyPlan} dayOrder={dayOrder} onUpdatePlan={updateWeeklyPlan} onMoveRecipe={moveRecipeBetweenDays} />
+            <WeeklyPlanner
+              recipes={recipes}
+              plan={weeklyPlan}
+              dayOrder={dayOrder}
+              householdSize={householdSize}
+              onUpdatePlan={updateWeeklyPlan}
+              onMoveRecipe={moveRecipeBetweenDays}
+            />
           )}
           {view === 'SETTINGS' && renderSettings()}
         </main>

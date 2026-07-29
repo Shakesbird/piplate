@@ -30,18 +30,69 @@ const LAST_IMPORT_KEY = 'piplate-bring-import-path';
 
 const normalizeIngredient = (ingredient: string) => ingredient.trim().replace(/\s+/g, ' ');
 
+const VULGAR_FRACTIONS: Record<string, number> = {
+  '¼': 1 / 4,
+  '½': 1 / 2,
+  '¾': 3 / 4,
+  '⅓': 1 / 3,
+  '⅔': 2 / 3,
+  '⅛': 1 / 8,
+  '⅜': 3 / 8,
+  '⅝': 5 / 8,
+  '⅞': 7 / 8,
+};
+
+const parseQuantity = (raw: string) => {
+  if (VULGAR_FRACTIONS[raw]) return VULGAR_FRACTIONS[raw];
+  if (raw.includes(' ')) {
+    const [whole, fraction] = raw.split(/\s+/, 2);
+    const [numerator, denominator] = fraction.split('/').map(Number);
+    return Number(whole) + numerator / denominator;
+  }
+  if (raw.includes('/')) {
+    const [numerator, denominator] = raw.split('/').map(Number);
+    return numerator / denominator;
+  }
+  return Number(raw.replace(',', '.'));
+};
+
+const formatQuantity = (quantity: number) => {
+  const rounded = Math.round(quantity * 1000) / 1000;
+  return Number.isInteger(rounded)
+    ? String(rounded)
+    : String(rounded).replace(/(\.\d*?)0+$/, '$1');
+};
+
+const scaleIngredient = (rawIngredient: string, recipeMultiplier: number) => {
+  const ingredient = normalizeIngredient(rawIngredient);
+  if (!ingredient || Math.abs(recipeMultiplier - 1) < 0.0001) return ingredient;
+
+  const quantityMatch = ingredient.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?|[¼½¾⅓⅔⅛⅜⅝⅞])(?=\s|[a-zA-ZäöüÄÖÜß])\s*(.*)$/);
+  if (!quantityMatch) return `${formatQuantity(recipeMultiplier)} ${ingredient}`;
+
+  const [, rawQuantity, remainder] = quantityMatch;
+  return `${formatQuantity(parseQuantity(rawQuantity) * recipeMultiplier)} ${remainder}`.trim();
+};
+
 export const collectPlannerIngredients = (
   recipes: Recipe[],
   plan: WeeklyPlan,
   dayOrder: string[],
+  householdSize = 2,
 ) => {
   const recipesById = new Map(recipes.map(recipe => [recipe.id, recipe]));
   const occurrences = dayOrder.flatMap(day => plan[day] || []);
+  const recipeCounts = new Map<string, number>();
+  occurrences.forEach(recipeId => recipeCounts.set(recipeId, (recipeCounts.get(recipeId) || 0) + 1));
   const counts = new Map<string, { ingredient: string; count: number }>();
 
-  occurrences.forEach(recipeId => {
-    recipesById.get(recipeId)?.ingredients.forEach(rawIngredient => {
-      const ingredient = normalizeIngredient(rawIngredient);
+  recipeCounts.forEach((occurrenceCount, recipeId) => {
+    const recipe = recipesById.get(recipeId);
+    if (!recipe) return;
+    const recipeMultiplier = (occurrenceCount * Math.max(1, householdSize)) / Math.max(1, recipe.portions);
+
+    recipe.ingredients.forEach(rawIngredient => {
+      const ingredient = scaleIngredient(rawIngredient, recipeMultiplier);
       if (!ingredient) return;
       const key = ingredient.toLocaleLowerCase();
       const current = counts.get(key);

@@ -163,6 +163,8 @@ export const useRecipes = () => {
   const recipesLoading = recipeData === undefined;
   const weeklyPlanData = useLiveQuery(() => db.settings.get('weeklyPlan'));
   const weeklyPlan: WeeklyPlan = weeklyPlanData?.value || {};
+  const householdSizeData = useLiveQuery(() => db.settings.get('householdSize'));
+  const householdSize = Math.min(20, Math.max(1, Number(householdSizeData?.value) || 2));
   const [dayOrder, setDayOrder] = useState(getTodayFirstDayOrder);
 
   useEffect(() => {
@@ -227,6 +229,15 @@ export const useRecipes = () => {
     }
   };
 
+  const updateHouseholdSize = async (size: number) => {
+    const normalizedSize = Math.min(20, Math.max(1, Math.round(size) || 1));
+    try {
+      await db.settings.put({ key: 'householdSize', value: normalizedSize });
+    } catch (e) {
+      console.error('Failed to save household size:', e);
+    }
+  };
+
   const deleteRecipe = async (id: string) => {
     try {
       await createLocalBackup('before-recipe-delete');
@@ -288,5 +299,16 @@ export const useRecipes = () => {
     }
   };
 
-  return { recipes, recipesLoading, weeklyPlan, dayOrder, saveRecipe, deleteRecipe, updateWeeklyPlan, moveRecipeBetweenDays };
+  return {
+    recipes,
+    recipesLoading,
+    weeklyPlan,
+    householdSize,
+    dayOrder,
+    saveRecipe,
+    deleteRecipe,
+    updateWeeklyPlan,
+    updateHouseholdSize,
+    moveRecipeBetweenDays,
+  };
 };

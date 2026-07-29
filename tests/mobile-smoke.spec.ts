@@ -376,6 +376,93 @@ test('planner starts with today and keeps planned meals after reload', async ({ 
   await expectNoHorizontalOverflow(page);
 });
 
+test('household size persists and avoids duplicate Bring quantities for leftovers', async ({ page }) => {
+  await openSettings(page);
+  const householdSettings = page.getByTestId('household-size-settings');
+  const householdInput = householdSettings.getByTestId('household-size-input');
+  await expect(householdSettings.getByRole('heading', { name: /people in your household|personen im haushalt/i })).toBeVisible();
+  await householdInput.fill('3');
+  await expect(householdInput).toHaveValue('3');
+  await expectNoHorizontalOverflow(page);
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
+  await openSettings(page);
+  const persistedInput = page.getByTestId('household-size-input');
+  await expect(persistedInput).toHaveValue('3');
+  await persistedInput.fill('2');
+  await expect(persistedInput).toHaveValue('2');
+  await expect.poll(() => page.evaluate(async () => {
+    return new Promise<number | undefined>((resolve, reject) => {
+      const request = indexedDB.open('PiPlateDB');
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction('settings', 'readonly');
+        const getRequest = transaction.objectStore('settings').get('householdSize');
+        getRequest.onsuccess = () => {
+          database.close();
+          resolve(getRequest.result?.value);
+        };
+        getRequest.onerror = () => reject(getRequest.error);
+      };
+    });
+  })).toBe(2);
+
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('PiPlateDB');
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction(['recipes', 'settings'], 'readwrite');
+        transaction.objectStore('recipes').put({
+          id: 'leftovers-for-two-days',
+          title: 'Two-day pasta',
+          ingredients: ['500g Pasta', '2 Eggs', 'Fresh Basil'],
+          instructions: ['Cook once and serve twice'],
+          portions: 4,
+          nutrition: { calories: 1600, protein: 60, carbs: 240, fat: 40 },
+          imageUri: './recipe-images/pasta-bake.webp',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+        transaction.objectStore('settings').put({
+          key: 'weeklyPlan',
+          value: {
+            Monday: ['leftovers-for-two-days'],
+            Tuesday: ['leftovers-for-two-days'],
+          },
+        });
+        transaction.oncomplete = () => {
+          database.close();
+          resolve();
+        };
+        transaction.onerror = () => reject(transaction.error);
+      };
+    });
+  });
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: /what are we cooking|was kochen wir/i })).toBeVisible();
+  await openPlanner(page);
+  await expect(page.getByRole('heading', { name: 'Two-day pasta' })).toHaveCount(2);
+  await expect(page.getByRole('link', { name: /open in bring|in bring öffnen/i })).toBeVisible();
+
+  await expect.poll(() => page.evaluate(() => (
+    window as Window & {
+      __PIPLATE_LAST_BRING_IMPORT__?: {
+        recipe: { items: Array<{ itemId: string; spec?: string }> };
+      };
+    }
+  ).__PIPLATE_LAST_BRING_IMPORT__?.recipe.items)).toEqual([
+    { itemId: 'Pasta', spec: '500g' },
+    { itemId: 'Eggs', spec: '2' },
+    { itemId: 'Fresh Basil' },
+  ]);
+  await expectNoHorizontalOverflow(page);
+});
+
 test('planner shows complete recipe names without meal quantities', async ({ page }) => {
   const longTitle = 'A colourful vegetable casserole for everyone around the family table';
   await page.evaluate(async title => {

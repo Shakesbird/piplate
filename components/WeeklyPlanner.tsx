@@ -8,6 +8,7 @@ interface WeeklyPlannerProps {
   recipes: Recipe[];
   plan: WeeklyPlan;
   dayOrder: string[];
+  householdSize: number;
   onUpdatePlan: (day: string, recipeIds: string[]) => void;
   onMoveRecipe: (fromDay: string, toDay: string, recipeId: string) => Promise<void>;
 }
@@ -19,7 +20,7 @@ interface DragPayload {
 
 const BRING_LINK_REFRESH_MS = 8 * 60 * 1000;
 
-const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, onUpdatePlan, onMoveRecipe }) => {
+const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, householdSize, onUpdatePlan, onMoveRecipe }) => {
   const { t, dayName } = useLanguage();
   const [activeDayForAdd, setActiveDayForAdd] = useState<string | null>(null);
   const [moveRecipe, setMoveRecipe] = useState<{ day: string; recipeId: string } | null>(null);
@@ -30,8 +31,8 @@ const WeeklyPlanner: React.FC<WeeklyPlannerProps> = ({ recipes, plan, dayOrder, 
 
   const getRecipe = (id: string) => recipes.find(recipe => recipe.id === id);
   const plannerIngredients = useMemo(
-    () => collectPlannerIngredients(recipes, plan, dayOrder),
-    [recipes, plan, dayOrder],
+    () => collectPlannerIngredients(recipes, plan, dayOrder, householdSize),
+    [recipes, plan, dayOrder, householdSize],
   );
   const plannerIngredientsKey = useMemo(
     () => JSON.stringify(plannerIngredients),

@@ -1,14 +1,14 @@
 export const CURRENT_RELEASE = {
-  id: '2026-07-19-mobile-card-details',
-  version: '1.6.1',
+  id: '2026-07-29-household-portions',
+  version: '1.7.0',
   en: {
     lines: [
-      'Recipe and planner cards now keep their details readable and correctly aligned.',
+      'Set your household size so Bring gets the right ingredient amounts for meals planned across several days.',
     ],
   },
   de: {
     lines: [
-      'Rezept- und Wochenplan-Karten zeigen ihre Details jetzt lesbar und richtig ausgerichtet.',
+      'Lege deine Haushaltsgröße fest, damit Bring für Mahlzeiten an mehreren Tagen die richtigen Zutatenmengen erhält.',
     ],
   },
 } as const;
